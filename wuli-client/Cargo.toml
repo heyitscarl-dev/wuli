@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+egui-macroquad = "0.17.3"
+egui = "0.31.1"                 # egui-macroquad (v0.17.3) depends on v0.31.1
+macroquad = "0.4.16"            # egui-macroquad (v0.17.3) depends on v0.4.16
+wuli-lib = { version = "0.1.0", path = "../wuli-lib" }
