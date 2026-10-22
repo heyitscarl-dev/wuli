@@ -1771,20 +1771,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
+name = "wuli"
+version = "0.1.0"
+dependencies = [
+ "glam 0.34.1",
+]
+
+[[package]]
 name = "wuli-client"
 version = "0.1.0"
 dependencies = [
  "egui",
  "egui-macroquad",
+ "glam 0.34.1",
  "macroquad",
- "wuli-lib",
+ "wuli",
+ "wuli-scenes",
 ]
 
 [[package]]
-name = "wuli-lib"
+name = "wuli-scenes"
 version = "0.1.0"
 dependencies = [
  "glam 0.34.1",
+ "wuli",
 ]
 
 [[package]]
