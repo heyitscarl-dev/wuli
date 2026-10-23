@@ -1,4 +1,8 @@
-use crate::{World, body::BodyHandle, collision::{CouldCollide, aabb::AxisAlignedBoundingBox}};
+use crate::{
+    World,
+    body::BodyHandle,
+    collision::{CouldCollide, aabb::AxisAlignedBoundingBox},
+};
 
 impl CouldCollide for (AxisAlignedBoundingBox, AxisAlignedBoundingBox) {
     fn could_collide(&self) -> bool {
@@ -41,7 +45,10 @@ mod tests {
     use glam::{DVec2, dvec2};
 
     fn aabb(min: (f64, f64), max: (f64, f64)) -> AxisAlignedBoundingBox {
-        AxisAlignedBoundingBox { min: dvec2(min.0, min.1), max: dvec2(max.0, max.1) }
+        AxisAlignedBoundingBox {
+            min: dvec2(min.0, min.1),
+            max: dvec2(max.0, max.1),
+        }
     }
 
     fn ball(x: f64, y: f64) -> RigidBody {
@@ -49,7 +56,10 @@ mod tests {
     }
 
     fn world(bodies: Vec<RigidBody>) -> World {
-        World { gravity: DVec2::ZERO, bodies }
+        World {
+            gravity: DVec2::ZERO,
+            bodies,
+        }
     }
 
     #[test]
@@ -111,6 +121,11 @@ mod tests {
     fn each_pair_reported_once() {
         let w = world(vec![ball(0.0, 0.0), ball(0.8, 0.0)]);
         let pairs = get_possible_collisions(&w);
-        assert_eq!(pairs.len(), 1, "pair (0, 1) was reported {} times", pairs.len());
+        assert_eq!(
+            pairs.len(),
+            1,
+            "pair (0, 1) was reported {} times",
+            pairs.len()
+        );
     }
 }

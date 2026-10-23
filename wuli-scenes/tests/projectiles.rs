@@ -14,7 +14,10 @@ fn momentum_x(w: &World) -> f64 {
 }
 
 fn kinetic_energy_x(w: &World) -> f64 {
-    w.bodies.iter().map(|b| 0.5 * b.velocity.x * b.velocity.x / b.inv_mass).sum()
+    w.bodies
+        .iter()
+        .map(|b| 0.5 * b.velocity.x * b.velocity.x / b.inv_mass)
+        .sum()
 }
 
 #[test]
@@ -30,9 +33,20 @@ fn approaching_before_collision() {
 fn equal_masses_swap_velocities_after_collision() {
     let mut w = projectiles_a();
     run(&mut w, 2.0);
-    assert!((w.bodies[0].velocity.x + 2.0).abs() < 1e-9, "a vx = {}", w.bodies[0].velocity.x);
-    assert!((w.bodies[1].velocity.x - 2.0).abs() < 1e-9, "b vx = {}", w.bodies[1].velocity.x);
-    assert!(w.bodies[0].position.x < w.bodies[1].position.x, "balls passed through each other");
+    assert!(
+        (w.bodies[0].velocity.x + 2.0).abs() < 1e-9,
+        "a vx = {}",
+        w.bodies[0].velocity.x
+    );
+    assert!(
+        (w.bodies[1].velocity.x - 2.0).abs() < 1e-9,
+        "b vx = {}",
+        w.bodies[1].velocity.x
+    );
+    assert!(
+        w.bodies[0].position.x < w.bodies[1].position.x,
+        "balls passed through each other"
+    );
 }
 
 #[test]
@@ -40,8 +54,16 @@ fn horizontal_momentum_and_energy_conserved() {
     let mut w = projectiles_a();
     let (p0, e0) = (momentum_x(&w), kinetic_energy_x(&w));
     run(&mut w, 3.0);
-    assert!((momentum_x(&w) - p0).abs() < 1e-9, "p_x {p0} -> {}", momentum_x(&w));
-    assert!((kinetic_energy_x(&w) - e0).abs() < 1e-9, "E_x {e0} -> {}", kinetic_energy_x(&w));
+    assert!(
+        (momentum_x(&w) - p0).abs() < 1e-9,
+        "p_x {p0} -> {}",
+        momentum_x(&w)
+    );
+    assert!(
+        (kinetic_energy_x(&w) - e0).abs() < 1e-9,
+        "E_x {e0} -> {}",
+        kinetic_energy_x(&w)
+    );
 }
 
 #[test]

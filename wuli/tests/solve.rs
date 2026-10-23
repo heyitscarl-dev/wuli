@@ -1,10 +1,17 @@
 use glam::{DVec2, dvec2};
-use wuli::{RigidBody, World, body::BodyHandle, collision::{narrow::get_collision, solve::handle_collision}};
+use wuli::{
+    RigidBody, World,
+    body::BodyHandle,
+    collision::{narrow::get_collision, solve::handle_collision},
+};
 
 const EPS: f64 = 1e-12;
 
 fn world(bodies: Vec<RigidBody>) -> World {
-    World { gravity: DVec2::ZERO, bodies }
+    World {
+        gravity: DVec2::ZERO,
+        bodies,
+    }
 }
 
 fn ball(x: f64, vx: f64, inv_mass: f64) -> RigidBody {
@@ -12,11 +19,19 @@ fn ball(x: f64, vx: f64, inv_mass: f64) -> RigidBody {
 }
 
 fn momentum(w: &World) -> DVec2 {
-    w.bodies.iter().filter(|b| b.inv_mass > 0.0).map(|b| b.velocity / b.inv_mass).sum()
+    w.bodies
+        .iter()
+        .filter(|b| b.inv_mass > 0.0)
+        .map(|b| b.velocity / b.inv_mass)
+        .sum()
 }
 
 fn kinetic_energy(w: &World) -> f64 {
-    w.bodies.iter().filter(|b| b.inv_mass > 0.0).map(|b| 0.5 * b.velocity.length_squared() / b.inv_mass).sum()
+    w.bodies
+        .iter()
+        .filter(|b| b.inv_mass > 0.0)
+        .map(|b| 0.5 * b.velocity.length_squared() / b.inv_mass)
+        .sum()
 }
 
 fn resolve(w: &mut World) {
@@ -38,8 +53,17 @@ fn unequal_masses_conserve_momentum_and_energy() {
     let mut w = world(vec![ball(0.0, 2.0, 1.0), ball(0.9, -1.0, 0.25)]);
     let (p0, e0) = (momentum(&w), kinetic_energy(&w));
     resolve(&mut w);
-    assert!((momentum(&w) - p0).length() < EPS, "momentum {:?} -> {:?}", p0, momentum(&w));
-    assert!((kinetic_energy(&w) - e0).abs() < EPS, "energy {e0} -> {}", kinetic_energy(&w));
+    assert!(
+        (momentum(&w) - p0).length() < EPS,
+        "momentum {:?} -> {:?}",
+        p0,
+        momentum(&w)
+    );
+    assert!(
+        (kinetic_energy(&w) - e0).abs() < EPS,
+        "energy {e0} -> {}",
+        kinetic_energy(&w)
+    );
 }
 
 #[test]
@@ -59,7 +83,10 @@ fn separating_bodies_are_left_alone() {
     let mut w = world(vec![ball(0.0, -1.0, 1.0), ball(0.9, 1.0, 1.0)]);
     let before = w.bodies.clone();
     resolve(&mut w);
-    assert!(w.bodies == before, "separating bodies should not be touched");
+    assert!(
+        w.bodies == before,
+        "separating bodies should not be touched"
+    );
 }
 
 #[test]
@@ -67,7 +94,10 @@ fn penetration_is_resolved() {
     let mut w = world(vec![ball(0.0, 1.0, 1.0), ball(0.6, -1.0, 1.0)]);
     resolve(&mut w);
     let gap = (w.bodies[1].position - w.bodies[0].position).length();
-    assert!((gap - 1.0).abs() < EPS, "centres should be r_a + r_b apart, got {gap}");
+    assert!(
+        (gap - 1.0).abs() < EPS,
+        "centres should be r_a + r_b apart, got {gap}"
+    );
 }
 
 #[test]

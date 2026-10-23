@@ -9,7 +9,9 @@ pub fn handle_collision(world: &mut World, collision: Collision) {
         let a = world.body(collision.a);
         let b = world.body(collision.b);
         let normal_velocity = DVec2::dot(b.velocity - a.velocity, collision.normal);
-        if normal_velocity > 0.0 { return; }    // already seperating naturally
+        if normal_velocity > 0.0 {
+            return;
+        } // already seperating naturally
         let restitution = 1.0; // elastic
         impulse = -(1.0 + restitution) * normal_velocity / (a.inv_mass + b.inv_mass);
         total_mass = a.inv_mass + b.inv_mass;

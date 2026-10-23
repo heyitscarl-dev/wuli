@@ -1,6 +1,9 @@
 use glam::DVec2;
 
-use crate::{body::{BodyHandle, RigidBody}, collision};
+use crate::{
+    body::{BodyHandle, RigidBody},
+    collision,
+};
 
 #[derive(Clone)]
 pub struct World {
@@ -27,14 +30,18 @@ impl World {
         let collision_pairs = collision::broad::get_possible_collisions(self);
         for pair in collision_pairs {
             let collision = collision::narrow::get_collision(self, pair.0, pair.1);
-            if collision.is_none() { continue; }
+            if collision.is_none() {
+                continue;
+            }
             let collision = collision.unwrap();
             collision::solve::handle_collision(self, collision);
         }
     }
 
     pub fn handles(&self) -> Vec<BodyHandle> {
-        self.bodies.iter().enumerate()
+        self.bodies
+            .iter()
+            .enumerate()
             .map(|(i, _)| i)
             .map(|i| BodyHandle(i))
             .collect()

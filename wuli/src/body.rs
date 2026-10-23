@@ -32,7 +32,15 @@ impl RigidBody {
     pub fn circle(position: DVec2, velocity: DVec2, inv_mass: f64, radius: f64) -> Self {
         let shape = Shape::Circle { radius };
         let inv_inertia = 1.0 / shape.inertia(1.0 / inv_mass); // static (inv_mass = 0) → 1/∞ = 0
-        Self { shape, position, velocity, inv_mass, angle: 0.0, angular_velocity: 0.0, inv_inertia }
+        Self {
+            shape,
+            position,
+            velocity,
+            inv_mass,
+            angle: 0.0,
+            angular_velocity: 0.0,
+            inv_inertia,
+        }
     }
 }
 
@@ -87,7 +95,9 @@ mod tests {
 
     #[test]
     fn rectangle_area() {
-        let s = Shape::Rectangle { half_extents: dvec2(1.0, 2.0) };
+        let s = Shape::Rectangle {
+            half_extents: dvec2(1.0, 2.0),
+        };
         assert!((s.area() - 8.0).abs() < EPS);
     }
 
@@ -101,7 +111,9 @@ mod tests {
     #[test]
     fn rectangle_inertia() {
         // I = m·(w² + h²)/12 with full width w = 2, height h = 4
-        let s = Shape::Rectangle { half_extents: dvec2(1.0, 2.0) };
+        let s = Shape::Rectangle {
+            half_extents: dvec2(1.0, 2.0),
+        };
         assert!((s.inertia(3.0) - 3.0 * (4.0 + 16.0) / 12.0).abs() < EPS);
     }
 
@@ -136,7 +148,9 @@ mod tests {
     fn rotated_square_bounds() {
         // A unit-half-extent square rotated by 45° reaches √2 along both axes
         let mut b = RigidBody::circle(DVec2::ZERO, DVec2::ZERO, 1.0, 1.0);
-        b.shape = Shape::Rectangle { half_extents: dvec2(1.0, 1.0) };
+        b.shape = Shape::Rectangle {
+            half_extents: dvec2(1.0, 1.0),
+        };
         b.angle = FRAC_PI_4;
         let (min, max) = b.bounds();
         assert!(approx(min, dvec2(-SQRT_2, -SQRT_2)));

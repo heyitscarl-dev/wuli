@@ -7,7 +7,11 @@ fn simulate(steps: usize) -> (f64, f64) {
     for _ in 0..steps {
         world.step(delta);
     }
-    let p = world.bodies.first().expect("expected projectile in scene").position;
+    let p = world
+        .bodies
+        .first()
+        .expect("expected projectile in scene")
+        .position;
     (p.x, p.y)
 }
 
@@ -23,8 +27,17 @@ fn test_projectile_a() {
     let (x2, y2) = simulate(steps * 2);
 
     // Constant velocity: any integrator should get x exact up to rounding.
-    assert!((expected_x - x1).abs() < 1e-9, "x error {:e} at {steps} steps", expected_x - x1);
-    assert!((expected_x - x2).abs() < 1e-9, "x error {:e} at {} steps", expected_x - x2, steps * 2);
+    assert!(
+        (expected_x - x1).abs() < 1e-9,
+        "x error {:e} at {steps} steps",
+        expected_x - x1
+    );
+    assert!(
+        (expected_x - x2).abs() < 1e-9,
+        "x error {:e} at {} steps",
+        expected_x - x2,
+        steps * 2
+    );
 
     // First-order (semi-implicit) Euler: |y error| = ½·|g|·dt exactly for constant g.
     let err1 = expected_y - y1;
@@ -36,5 +49,8 @@ fn test_projectile_a() {
 
     // Halving dt should halve the error (first order).
     let ratio = (expected_y - y2) / err1;
-    assert!((ratio - 0.5).abs() < 1e-3, "y error ratio {ratio}, expected 0.5 (first-order)");
+    assert!(
+        (ratio - 0.5).abs() < 1e-3,
+        "y error ratio {ratio}, expected 0.5 (first-order)"
+    );
 }

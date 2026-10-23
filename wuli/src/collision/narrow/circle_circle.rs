@@ -2,14 +2,28 @@ use glam::DVec2;
 
 use crate::{World, body::BodyHandle, collision::narrow::Collision};
 
-pub fn get_circle_circle_collision(world: &World, body_a: BodyHandle, body_b: BodyHandle, ra: f64, rb: f64) -> Option<Collision> {
+pub fn get_circle_circle_collision(
+    world: &World,
+    body_a: BodyHandle,
+    body_b: BodyHandle,
+    ra: f64,
+    rb: f64,
+) -> Option<Collision> {
     let a = world.body(body_a).position;
     let b = world.body(body_b).position;
-    if (ra + rb) < (a - b).length() { return None; }
+    if (ra + rb) < (a - b).length() {
+        return None;
+    }
     let normal = (b - a).try_normalize().unwrap_or(DVec2::Y); // concentric: any direction separates them
     let depth = ra + rb - (a - b).length();
-    let contact =  a + normal * ra;
-    Some(Collision { a: body_a, b: body_b, normal, depth, contact })
+    let contact = a + normal * ra;
+    Some(Collision {
+        a: body_a,
+        b: body_b,
+        normal,
+        depth,
+        contact,
+    })
 }
 
 #[cfg(test)]
@@ -40,7 +54,10 @@ mod tests {
     fn overlapping_circles_report_normal_depth_and_contact() {
         let w = two_balls(dvec2(0.0, 0.0), 1.0, dvec2(1.5, 0.0), 1.0);
         let c = get_collision(&w, BodyHandle(0), BodyHandle(1)).expect("expected collision");
-        assert!((c.normal - dvec2(1.0, 0.0)).length() < EPS, "normal should point from a to b");
+        assert!(
+            (c.normal - dvec2(1.0, 0.0)).length() < EPS,
+            "normal should point from a to b"
+        );
         assert!((c.depth - 0.5).abs() < EPS);
         assert!((c.contact - dvec2(1.0, 0.0)).length() < EPS);
         assert!(c.a == BodyHandle(0) && c.b == BodyHandle(1));
@@ -76,13 +93,19 @@ mod tests {
     fn concentric_circles_give_finite_normal() {
         let w = two_balls(dvec2(0.0, 0.0), 1.0, dvec2(0.0, 0.0), 1.0);
         let c = get_collision(&w, BodyHandle(0), BodyHandle(1)).expect("expected collision");
-        assert!(c.normal.is_finite(), "normal is {:?} for concentric circles", c.normal);
+        assert!(
+            c.normal.is_finite(),
+            "normal is {:?} for concentric circles",
+            c.normal
+        );
     }
 
     #[test]
     fn non_circle_shapes_are_not_handled_yet() {
         let mut w = two_balls(dvec2(0.0, 0.0), 1.0, dvec2(0.5, 0.0), 1.0);
-        w.bodies[1].shape = crate::body::Shape::Rectangle { half_extents: dvec2(1.0, 1.0) };
+        w.bodies[1].shape = crate::body::Shape::Rectangle {
+            half_extents: dvec2(1.0, 1.0),
+        };
         assert!(get_collision(&w, BodyHandle(0), BodyHandle(1)).is_none());
     }
 }

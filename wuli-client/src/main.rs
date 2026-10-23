@@ -1,11 +1,19 @@
 use glam::DVec2;
 use macroquad::{
-    camera::{Camera2D, set_camera}, color::{BLACK, GREEN, ORANGE, RED}, input::{
+    camera::{Camera2D, set_camera},
+    color::{BLACK, GREEN, ORANGE, RED},
+    input::{
         KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down, mouse_position,
         mouse_wheel,
-    }, shapes::{draw_circle, draw_rectangle_lines, draw_triangle}, time::get_frame_time, window::{clear_background, next_frame, screen_height, screen_width},
+    },
+    shapes::{draw_circle, draw_rectangle_lines, draw_triangle},
+    time::get_frame_time,
+    window::{clear_background, next_frame, screen_height, screen_width},
 };
-use wuli::{body::{BodyHandle, Shape}, collision::{aabb::AxisAlignedBoundingBox, broad::get_possible_collisions}};
+use wuli::{
+    body::{BodyHandle, Shape},
+    collision::{aabb::AxisAlignedBoundingBox, broad::get_possible_collisions},
+};
 
 const DT: f64 = 1.0 / 240.0; // run physics at 240 Hz
 
@@ -92,10 +100,11 @@ async fn main() {
         clear_background(BLACK);
         set_camera(&view.camera());
 
-        let pairs = get_possible_collisions(&world).into_iter()
+        let pairs = get_possible_collisions(&world)
+            .into_iter()
             .flat_map(|(a, _)| vec![a])
             .collect::<Vec<BodyHandle>>();
-        
+
         for handle in world.handles() {
             let body = world.body(handle);
             let c = view.to_camera(body.position);
@@ -115,9 +124,14 @@ async fn main() {
             let min = view.to_camera(aabb.min);
             let max = view.to_camera(aabb.max);
             let size = max - min;
-            draw_rectangle_lines(min.x, min.y, size.x, size.y, 0.075, if pairs.contains(&handle) {
-                GREEN
-            } else { RED });
+            draw_rectangle_lines(
+                min.x,
+                min.y,
+                size.x,
+                size.y,
+                0.075,
+                if pairs.contains(&handle) { GREEN } else { RED },
+            );
         }
 
         next_frame().await
