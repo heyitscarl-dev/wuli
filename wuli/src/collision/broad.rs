@@ -17,10 +17,8 @@ pub fn get_possible_collisions(world: &World) -> Vec<(BodyHandle, BodyHandle)> {
     // FIXME: Switch to a (e.g.) grid based approach to solve O(n²)
 
     let handles = world.handles();
-    for ha in &handles {
-        for hb in &handles {
-            if ha == hb { continue; }
-
+    for (i, ha) in handles.iter().enumerate() {
+        for hb in &handles[i + 1..] {
             let a = world.body(*ha);
             let b = world.body(*hb);
             let a_box = AxisAlignedBoundingBox::from_body(a);
