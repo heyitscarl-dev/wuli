@@ -31,7 +31,7 @@ impl RigidBody {
 
     pub fn circle(position: DVec2, velocity: DVec2, inv_mass: f64, radius: f64) -> Self {
         let shape = Shape::Circle { radius };
-        let inv_inertia = shape.inertia(1.0 / inv_mass);
+        let inv_inertia = 1.0 / shape.inertia(1.0 / inv_mass); // static (inv_mass = 0) → 1/∞ = 0
         Self { shape, position, velocity, inv_mass, angle: 0.0, angular_velocity: 0.0, inv_inertia }
     }
 }
