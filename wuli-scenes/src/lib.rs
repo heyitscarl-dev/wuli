@@ -40,24 +40,23 @@ pub fn projectile_2() -> World {
         inv_inertia: 1.0 / inertia,
     };
 
-    let shape = Shape::Rectangle { half_extents: DVec2 { x: 1.0, y: 0.2 } };
+    let shape = Shape::Rectangle {
+        half_extents: DVec2 { x: 1.0, y: 0.2 },
+    };
     let mass = 50.0;
     let inertia = shape.inertia(mass);
-    let body2: RigidBody = RigidBody { 
+    let body2: RigidBody = RigidBody {
         shape,
         position: DVec2 { x: 2.5, y: -5.0 },
         angle: 0.0,
         velocity: DVec2 { x: 0.0, y: 0.0 },
         angular_velocity: -0.1,
         inv_mass: 1.0 / mass,
-        inv_inertia: 1.0 / inertia
+        inv_inertia: 1.0 / inertia,
     };
 
     World {
-        gravity: DVec2 {
-            x: 0.0,
-            y: 0.0,
-        },
+        gravity: DVec2 { x: 0.0, y: 0.0 },
         bodies: vec![body1, body2],
     }
 }

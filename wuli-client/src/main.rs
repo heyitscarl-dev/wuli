@@ -1,8 +1,16 @@
 use glam::DVec2;
 use macroquad::{
-    camera::{Camera2D, set_camera}, color::{BLACK, ORANGE}, input::{KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down, mouse_position, mouse_wheel}, shapes::{draw_circle, draw_rectangle, draw_triangle}, time::get_frame_time, window::{clear_background, next_frame, screen_height, screen_width},
+    camera::{Camera2D, set_camera},
+    color::{BLACK, ORANGE, RED},
+    input::{
+        KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down, mouse_position,
+        mouse_wheel,
+    },
+    shapes::{draw_circle, draw_rectangle_lines, draw_triangle},
+    time::get_frame_time,
+    window::{clear_background, next_frame, screen_height, screen_width},
 };
-use wuli::body::Shape;
+use wuli::{body::Shape, collision::aabb::AxisAlignedBoundingBox};
 
 const DT: f64 = 1.0 / 240.0; // run physics at 240 Hz
 
@@ -17,7 +25,7 @@ impl View {
     fn camera(&self) -> Camera2D {
         let w = self.width as f32;
         let h = w * screen_height() / screen_width();
-        Camera2D { 
+        Camera2D {
             target: DisplayVec2::ZERO,
             zoom: macroquad::math::vec2(2.0 / w, -2.0 / h),
             ..Default::default()
@@ -32,7 +40,10 @@ impl View {
 
 #[macroquad::main("wuli")]
 async fn main() {
-    let mut view = View { centre: DVec2 { x: 2.5, y: -2.5 }, width: 10.0 };
+    let mut view = View {
+        centre: DVec2 { x: 2.5, y: -2.5 },
+        width: 10.0,
+    };
     let mut last_mouse: Option<(f32, f32)> = None;
 
     let initial = wuli_scenes::projectile_2();
@@ -52,7 +63,7 @@ async fn main() {
         }
 
         if paused {
-            if is_key_down(KeyCode::Period) {
+            if is_key_down(KeyCode::Period) || is_key_pressed(KeyCode::Comma) {
                 world.step(DT);
             }
         } else {
@@ -64,8 +75,12 @@ async fn main() {
         }
 
         let (_, wheel) = mouse_wheel();
-        if wheel > 0.0 { view.width *= 0.9; }
-        if wheel < 0.0 { view.width *= 1.1; }
+        if wheel > 0.0 {
+            view.width *= 0.9;
+        }
+        if wheel < 0.0 {
+            view.width *= 1.1;
+        }
 
         let mouse = mouse_position();
         if is_mouse_button_down(MouseButton::Right) {
@@ -84,21 +99,25 @@ async fn main() {
 
         for body in &world.bodies {
             let c = view.to_camera(body.position);
+            let aabb = AxisAlignedBoundingBox::from_body(body);
             match body.shape {
                 Shape::Circle { radius } => draw_circle(c.x, c.y, radius as f32, ORANGE),
                 Shape::Rectangle { half_extents: h } => {
-                    let [a, b, c, d] 
-                        = Shape::rect_corners(body.position, body.angle, h);
-                    draw_triangle(display_vec2(a), display_vec2(b), display_vec2(c), ORANGE);
-                    draw_triangle(display_vec2(a), display_vec2(c), display_vec2(d), ORANGE);
+                    let [a, b, c, d] = Shape::rect_corners(body.position, body.angle, h);
+                    let a = view.to_camera(a);
+                    let b = view.to_camera(b);
+                    let c = view.to_camera(c);
+                    let d = view.to_camera(d);
+                    draw_triangle(a, b, c, ORANGE);
+                    draw_triangle(a, c, d, ORANGE);
                 }
             }
+            let min = view.to_camera(aabb.min);
+            let max = view.to_camera(aabb.max);
+            let size = max - min;
+            draw_rectangle_lines(min.x, min.y, size.x, size.y, 0.075, RED);
         }
 
         next_frame().await
     }
-}
-
-fn display_vec2(v: DVec2) -> DisplayVec2 {
-    DisplayVec2::new(v.x as f32, v.y as f32)
 }
