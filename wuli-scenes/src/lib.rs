@@ -1,7 +1,8 @@
-use glam::DVec2;
+use glam::{DVec2, dvec2};
 use wuli::{body::Shape, *};
 
 const NORMAL_GRAVITY: f64 = -9.81;
+const ZERO_GRAVITY: f64 = 0.0;
 
 pub fn projectile(vx0: f64) -> World {
     let shape = Shape::Circle { radius: 0.1 };
@@ -18,16 +19,13 @@ pub fn projectile(vx0: f64) -> World {
     };
 
     World {
-        gravity: DVec2 {
-            x: 0.0,
-            y: NORMAL_GRAVITY,
-        },
+        gravity: dvec2(0.0, NORMAL_GRAVITY),
         bodies: vec![body],
     }
 }
 
-pub fn projectile_2() -> World {
-    let shape = Shape::Circle { radius: 0.1 };
+pub fn collision() -> World {
+    let shape = Shape::Rectangle { half_extents: dvec2(0.75, 1.0) } ;
     let mass = 10.0;
     let inertia = shape.inertia(mass);
     let body1 = RigidBody {
@@ -35,7 +33,7 @@ pub fn projectile_2() -> World {
         position: DVec2 { x: 0.0, y: 0.0 },
         angle: 0.0,
         velocity: DVec2 { x: 2.5, y: -4.25 },
-        angular_velocity: 0.0,
+        angular_velocity: -3.0,
         inv_mass: 1.0 / mass, // 1 / 10kg = 0.1kg
         inv_inertia: 1.0 / inertia,
     };
@@ -56,7 +54,7 @@ pub fn projectile_2() -> World {
     };
 
     World {
-        gravity: DVec2 { x: 0.0, y: 0.0 },
+        gravity: dvec2(0.0, ZERO_GRAVITY),
         bodies: vec![body1, body2],
     }
 }

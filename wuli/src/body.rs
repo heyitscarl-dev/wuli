@@ -1,6 +1,6 @@
 use glam::{DVec2, dvec2};
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub struct RigidBody {
     pub position: DVec2,
     pub angle: f64,
@@ -27,7 +27,7 @@ impl RigidBody {
     }
 }
 
-#[derive(Clone)]
+#[derive(PartialEq, Clone)]
 pub enum Shape {
     Rectangle { half_extents: DVec2 },
     Circle { radius: f64 },
