@@ -6,6 +6,6 @@ pub fn get_circle_circle_collision(world: &World, body_a: BodyHandle, body_b: Bo
     if (ra + rb) < (a - b).length() { return None; }
     let normal = (b - a).normalize();
     let depth = ra + rb - (a - b).length();
-    let contact =  a + normal * (rb + ra * 0.5); // FIXME: Maybe?
+    let contact =  a + normal * ra;
     Some(Collision { a: body_a, b: body_b, normal, depth, contact })
 }
