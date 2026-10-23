@@ -1,6 +1,8 @@
 pub mod aabb;
 pub mod broad;
+pub mod narrow;
+pub mod solve;
 
-trait Collides {
-    fn collides(&self) -> bool;
+trait CouldCollide {
+    fn could_collide(&self) -> bool;
 }

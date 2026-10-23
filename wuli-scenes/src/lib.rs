@@ -58,3 +58,13 @@ pub fn collision() -> World {
         bodies: vec![body1, body2],
     }
 }
+
+pub fn colliding_circles() -> World {
+    let velocity = dvec2(4.5, 0.0);
+    let inv_mass = 0.1; // 10 kg
+    let position_a = dvec2(-5.0, 0.0);
+    let position_b = dvec2(5.0, 0.0);
+    let circle_a = RigidBody::circle(position_a, velocity, inv_mass, 0.2);
+    let circle_b = RigidBody::circle(position_b, -velocity, inv_mass / 2.0, 0.4);
+    World { bodies: vec![circle_a, circle_b], gravity: dvec2(0.0, NORMAL_GRAVITY) }
+}

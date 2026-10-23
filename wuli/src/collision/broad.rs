@@ -1,7 +1,7 @@
-use crate::{RigidBody, World, collision::{Collides, aabb::AxisAlignedBoundingBox}};
+use crate::{World, body::BodyHandle, collision::{CouldCollide, aabb::AxisAlignedBoundingBox}};
 
-impl Collides for (AxisAlignedBoundingBox, AxisAlignedBoundingBox) {
-    fn collides(&self) -> bool {
+impl CouldCollide for (AxisAlignedBoundingBox, AxisAlignedBoundingBox) {
+    fn could_collide(&self) -> bool {
         let is_a_left_b = self.0.max.x < self.1.min.x;
         let is_a_right_b = self.0.min.x > self.1.max.x;
         let is_a_above_b = self.0.min.y > self.1.max.y;
@@ -11,23 +11,25 @@ impl Collides for (AxisAlignedBoundingBox, AxisAlignedBoundingBox) {
     }
 }
 
-pub fn get_possible_collisions(world: &World) -> Vec<(&RigidBody, &RigidBody)> {
-    let mut pairs: Vec<(&RigidBody, &RigidBody)> = Vec::new();
+pub fn get_possible_collisions(world: &World) -> Vec<(BodyHandle, BodyHandle)> {
+    let mut pairs: Vec<(BodyHandle, BodyHandle)> = Vec::new();
 
     // FIXME: Switch to a (e.g.) grid based approach to solve O(n²)
 
-    let bodies = world.bodies();
-    for a in bodies {
-        for b in bodies {
-            if a == b { continue; }
+    let handles = world.handles();
+    for ha in &handles {
+        for hb in &handles {
+            if ha == hb { continue; }
 
+            let a = world.body(*ha);
+            let b = world.body(*hb);
             let a_box = AxisAlignedBoundingBox::from_body(a);
             let b_box = AxisAlignedBoundingBox::from_body(b);
-            if !(a_box, b_box).collides() {
+            if !(a_box, b_box).could_collide() {
                 continue;
             }
 
-            pairs.push((a, b));
+            pairs.push((*ha, *hb));
         }
     }
 

@@ -5,7 +5,7 @@ use macroquad::{
         mouse_wheel,
     }, shapes::{draw_circle, draw_rectangle_lines, draw_triangle}, time::get_frame_time, window::{clear_background, next_frame, screen_height, screen_width},
 };
-use wuli::{RigidBody, body::Shape, collision::{aabb::AxisAlignedBoundingBox, broad::get_possible_collisions}};
+use wuli::{body::{BodyHandle, Shape}, collision::{aabb::AxisAlignedBoundingBox, broad::get_possible_collisions}};
 
 const DT: f64 = 1.0 / 240.0; // run physics at 240 Hz
 
@@ -41,7 +41,7 @@ async fn main() {
     };
     let mut last_mouse: Option<(f32, f32)> = None;
 
-    let initial = wuli_scenes::collision();
+    let initial = wuli_scenes::colliding_circles();
     let mut world = initial.clone();
     let mut paused = false;
 
@@ -94,9 +94,10 @@ async fn main() {
 
         let pairs = get_possible_collisions(&world).into_iter()
             .flat_map(|(a, _)| vec![a])
-            .collect::<Vec<&RigidBody>>();
+            .collect::<Vec<BodyHandle>>();
         
-        for body in &world.bodies {
+        for handle in world.handles() {
+            let body = world.body(handle);
             let c = view.to_camera(body.position);
             let aabb = AxisAlignedBoundingBox::from_body(body);
             match body.shape {
@@ -114,7 +115,7 @@ async fn main() {
             let min = view.to_camera(aabb.min);
             let max = view.to_camera(aabb.max);
             let size = max - min;
-            draw_rectangle_lines(min.x, min.y, size.x, size.y, 0.075, if pairs.contains(&body) {
+            draw_rectangle_lines(min.x, min.y, size.x, size.y, 0.075, if pairs.contains(&handle) {
                 GREEN
             } else { RED });
         }
