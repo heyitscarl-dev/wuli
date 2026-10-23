@@ -41,7 +41,7 @@ async fn main() {
     };
     let mut last_mouse: Option<(f32, f32)> = None;
 
-    let initial = wuli_scenes::colliding_circles();
+    let initial = wuli_scenes::projectile_a();
     let mut world = initial.clone();
     let mut paused = false;
 
