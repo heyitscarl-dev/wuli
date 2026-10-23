@@ -102,7 +102,7 @@ async fn main() {
 
         let pairs = get_possible_collisions(&world)
             .into_iter()
-            .flat_map(|(a, _)| vec![a])
+            .flat_map(|(a, b)| [a, b])
             .collect::<Vec<BodyHandle>>();
 
         for handle in world.handles() {
