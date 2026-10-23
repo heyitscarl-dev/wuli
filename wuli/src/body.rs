@@ -67,3 +67,101 @@ impl Shape {
         .map(|local| pos + rot.rotate(local))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f64::consts::{FRAC_PI_2, FRAC_PI_4, PI, SQRT_2};
+
+    const EPS: f64 = 1e-12;
+
+    fn approx(a: DVec2, b: DVec2) -> bool {
+        (a - b).length() < EPS
+    }
+
+    #[test]
+    fn circle_area() {
+        let s = Shape::Circle { radius: 2.0 };
+        assert!((s.area() - 4.0 * PI).abs() < EPS);
+    }
+
+    #[test]
+    fn rectangle_area() {
+        let s = Shape::Rectangle { half_extents: dvec2(1.0, 2.0) };
+        assert!((s.area() - 8.0).abs() < EPS);
+    }
+
+    #[test]
+    fn circle_inertia() {
+        // Solid disc: I = ½·m·r²
+        let s = Shape::Circle { radius: 2.0 };
+        assert!((s.inertia(3.0) - 6.0).abs() < EPS);
+    }
+
+    #[test]
+    fn rectangle_inertia() {
+        // I = m·(w² + h²)/12 with full width w = 2, height h = 4
+        let s = Shape::Rectangle { half_extents: dvec2(1.0, 2.0) };
+        assert!((s.inertia(3.0) - 3.0 * (4.0 + 16.0) / 12.0).abs() < EPS);
+    }
+
+    #[test]
+    fn rect_corners_unrotated() {
+        let c = Shape::rect_corners(dvec2(1.0, 1.0), 0.0, dvec2(2.0, 1.0));
+        assert!(approx(c[0], dvec2(-1.0, 0.0)));
+        assert!(approx(c[1], dvec2(3.0, 0.0)));
+        assert!(approx(c[2], dvec2(3.0, 2.0)));
+        assert!(approx(c[3], dvec2(-1.0, 2.0)));
+    }
+
+    #[test]
+    fn rect_corners_rotated_quarter_turn() {
+        // Rotating counter-clockwise by 90° maps local (x, y) to (-y, x)
+        let c = Shape::rect_corners(DVec2::ZERO, FRAC_PI_2, dvec2(2.0, 1.0));
+        assert!(approx(c[0], dvec2(1.0, -2.0)));
+        assert!(approx(c[1], dvec2(1.0, 2.0)));
+        assert!(approx(c[2], dvec2(-1.0, 2.0)));
+        assert!(approx(c[3], dvec2(-1.0, -2.0)));
+    }
+
+    #[test]
+    fn circle_bounds() {
+        let b = RigidBody::circle(dvec2(1.0, -1.0), DVec2::ZERO, 1.0, 0.5);
+        let (min, max) = b.bounds();
+        assert!(approx(min, dvec2(0.5, -1.5)));
+        assert!(approx(max, dvec2(1.5, -0.5)));
+    }
+
+    #[test]
+    fn rotated_square_bounds() {
+        // A unit-half-extent square rotated by 45° reaches √2 along both axes
+        let mut b = RigidBody::circle(DVec2::ZERO, DVec2::ZERO, 1.0, 1.0);
+        b.shape = Shape::Rectangle { half_extents: dvec2(1.0, 1.0) };
+        b.angle = FRAC_PI_4;
+        let (min, max) = b.bounds();
+        assert!(approx(min, dvec2(-SQRT_2, -SQRT_2)));
+        assert!(approx(max, dvec2(SQRT_2, SQRT_2)));
+    }
+
+    #[test]
+    fn circle_constructor_sets_fields() {
+        let b = RigidBody::circle(dvec2(1.0, 2.0), dvec2(3.0, 4.0), 0.5, 0.1);
+        assert_eq!(b.position, dvec2(1.0, 2.0));
+        assert_eq!(b.velocity, dvec2(3.0, 4.0));
+        assert_eq!(b.inv_mass, 0.5);
+        assert_eq!(b.angle, 0.0);
+        assert_eq!(b.angular_velocity, 0.0);
+        assert!(b.shape == Shape::Circle { radius: 0.1 });
+    }
+
+    #[test]
+    fn circle_constructor_inv_inertia_is_inverse() {
+        // mass 1, radius 0.1 → I = 0.005, so 1/I = 200
+        let b = RigidBody::circle(DVec2::ZERO, DVec2::ZERO, 1.0, 0.1);
+        assert!(
+            (b.inv_inertia - 200.0).abs() < 1e-9,
+            "inv_inertia = {}, expected 1/I = 200",
+            b.inv_inertia
+        );
+    }
+}
