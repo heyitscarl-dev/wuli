@@ -17,8 +17,8 @@ pub struct Collision {
 }
 
 pub fn get_collision(world: &World, body_a: BodyHandle, body_b: BodyHandle) -> Option<Collision> {
-    let a = world.body(body_a);
-    let b = world.body(body_b);
+    let a = world.body(body_a).expect("expected body to exist");
+    let b = world.body(body_b).expect("expected body to exits");
     match (&a.shape, &b.shape) {
         (Shape::Circle { radius: ra }, Shape::Circle { radius: rb }) => {
             get_circle_circle_collision(world, body_a, body_b, *ra, *rb)

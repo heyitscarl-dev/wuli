@@ -106,7 +106,7 @@ async fn main() {
             .collect::<Vec<BodyHandle>>();
 
         for handle in world.handles() {
-            let body = world.body(handle);
+            let body = world.body(handle).expect("expected body to exist");
             let c = view.to_camera(body.position);
             let aabb = AxisAlignedBoundingBox::from_body(body);
             match body.shape {

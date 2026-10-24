@@ -1,7 +1,7 @@
 use glam::{DVec2, dvec2};
+use slotmap::new_key_type;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct BodyHandle(pub usize);
+new_key_type! { pub struct BodyHandle; }
 
 #[derive(PartialEq, Clone)]
 pub struct RigidBody {

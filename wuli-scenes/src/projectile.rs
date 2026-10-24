@@ -17,17 +17,26 @@ fn projectiles(dx: f64, dy: f64, vxa: f64, vxb: f64, mr: f64) -> World {
         1.0 / mr,
         0.1,
     );
-    let bodies = vec![body_a, body_b];
     let gravity = dvec2(0.0, NORMAL_GRAVITY);
-    World { gravity, bodies }
+    let mut world = World {
+        gravity,
+        bodies: Default::default(),
+    };
+    world.bodies.insert(body_a);
+    world.bodies.insert(body_b);
+    world
 }
 
 fn projectile(vx: f64) -> World {
     let origin = dvec2(0.0, 0.0);
     let body = RigidBody::circle(origin, dvec2(vx, 0.0), 1.0, 0.1);
-    let bodies = vec![body];
     let gravity = dvec2(0.0, NORMAL_GRAVITY);
-    World { gravity, bodies }
+    let mut world = World {
+        gravity,
+        bodies: Default::default(),
+    };
+    world.bodies.insert(body);
+    world
 }
 
 pub fn projectiles_a() -> World {

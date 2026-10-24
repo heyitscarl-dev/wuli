@@ -1,4 +1,5 @@
 use glam::DVec2;
+use slotmap::SlotMap;
 
 use crate::{
     body::{BodyHandle, RigidBody},
@@ -8,12 +9,12 @@ use crate::{
 #[derive(Clone)]
 pub struct World {
     pub gravity: DVec2, // e.g. $g =-9.81m/s^2$
-    pub bodies: Vec<RigidBody>,
+    pub bodies: SlotMap<BodyHandle, RigidBody>,
 }
 
 impl World {
     pub fn step(&mut self, dt: f64) {
-        for b in &mut self.bodies {
+        for (_, b) in &mut self.bodies {
             if b.inv_mass == 0.0 {
                 continue;
             } // skip static bodies
@@ -39,19 +40,14 @@ impl World {
     }
 
     pub fn handles(&self) -> Vec<BodyHandle> {
-        self.bodies
-            .iter()
-            .enumerate()
-            .map(|(i, _)| i)
-            .map(|i| BodyHandle(i))
-            .collect()
+        self.bodies.keys().collect()
     }
 
-    pub fn body(&self, handle: BodyHandle) -> &RigidBody {
-        &self.bodies[handle.0]
+    pub fn body(&self, handle: BodyHandle) -> Option<&RigidBody> {
+        self.bodies.get(handle)
     }
 
-    pub fn body_mut(&mut self, handle: BodyHandle) -> &mut RigidBody {
-        &mut self.bodies[handle.0]
+    pub fn body_mut(&mut self, handle: BodyHandle) -> Option<&mut RigidBody> {
+        self.bodies.get_mut(handle)
     }
 }
