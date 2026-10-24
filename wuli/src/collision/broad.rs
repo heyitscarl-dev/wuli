@@ -23,8 +23,8 @@ pub fn get_possible_collisions(world: &World) -> Vec<(BodyHandle, BodyHandle)> {
     let handles = world.handles();
     for (i, ha) in handles.iter().enumerate() {
         for hb in &handles[i + 1..] {
-            let a = world.body(*ha);
-            let b = world.body(*hb);
+            let a = world.body(*ha).expect("expected body to exist");
+            let b = world.body(*hb).expect("expected body to exist");
             let a_box = AxisAlignedBoundingBox::from_body(a);
             let b_box = AxisAlignedBoundingBox::from_body(b);
             if !(a_box, b_box).could_collide() {
@@ -55,11 +55,14 @@ mod tests {
         RigidBody::circle(dvec2(x, y), DVec2::ZERO, 1.0, 0.5)
     }
 
-    fn world(bodies: Vec<RigidBody>) -> World {
-        World {
-            gravity: DVec2::ZERO,
-            bodies,
-        }
+    /// Builds a world from `bodies`, returning the handles in insertion order.
+    fn world(gravity: DVec2, bodies: Vec<RigidBody>) -> (World, Vec<BodyHandle>) {
+        let mut w = World {
+            gravity,
+            bodies: Default::default(),
+        };
+        let handles = bodies.into_iter().map(|b| w.bodies.insert(b)).collect();
+        (w, handles)
     }
 
     #[test]
@@ -95,31 +98,37 @@ mod tests {
 
     #[test]
     fn no_pairs_for_distant_bodies() {
-        let w = world(vec![ball(0.0, 0.0), ball(10.0, 0.0), ball(0.0, 10.0)]);
+        let (w, _) = world(
+            DVec2::ZERO,
+            vec![ball(0.0, 0.0), ball(10.0, 0.0), ball(0.0, 10.0)],
+        );
         assert!(get_possible_collisions(&w).is_empty());
     }
 
     #[test]
     fn no_self_pairs() {
-        let w = world(vec![ball(0.0, 0.0)]);
+        let (w, _) = world(DVec2::ZERO, vec![ball(0.0, 0.0)]);
         assert!(get_possible_collisions(&w).is_empty());
     }
 
     #[test]
     fn overlapping_bodies_are_paired() {
-        let w = world(vec![ball(0.0, 0.0), ball(0.8, 0.0), ball(10.0, 0.0)]);
+        let (w, h) = world(
+            DVec2::ZERO,
+            vec![ball(0.0, 0.0), ball(0.8, 0.0), ball(10.0, 0.0)],
+        );
         let pairs = get_possible_collisions(&w);
         assert!(!pairs.is_empty());
-        assert!(pairs.iter().all(|&(a, b)| {
-            let mut ids = [a.0, b.0];
-            ids.sort();
-            ids == [0, 1]
-        }));
+        assert!(
+            pairs
+                .iter()
+                .all(|&(a, b)| { (a, b) == (h[0], h[1]) || (a, b) == (h[1], h[0]) })
+        );
     }
 
     #[test]
     fn each_pair_reported_once() {
-        let w = world(vec![ball(0.0, 0.0), ball(0.8, 0.0)]);
+        let (w, _) = world(DVec2::ZERO, vec![ball(0.0, 0.0), ball(0.8, 0.0)]);
         let pairs = get_possible_collisions(&w);
         assert_eq!(
             pairs.len(),

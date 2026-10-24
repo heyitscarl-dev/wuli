@@ -9,7 +9,8 @@ fn simulate(steps: usize) -> (f64, f64) {
     }
     let p = world
         .bodies
-        .first()
+        .values()
+        .next()
         .expect("expected projectile in scene")
         .position;
     (p.x, p.y)
