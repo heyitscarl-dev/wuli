@@ -19,8 +19,10 @@ pub mod view;
 
 #[macroquad::main("wuli")]
 async fn main() {
-    let scene = wuli_scenes::colliding_circles_a();
-    let mut world = scene.clone();
+    let options = wuli_scenes::available();
+    let mut current = 0;
+
+    let mut world = (options[current].1)();
     let mut view = View::new(0.0, 0.0, 10.0);
 
     let mut accumulator = 0.0;
@@ -35,7 +37,7 @@ async fn main() {
 
     loop {
         if reset {
-            world = scene.clone();
+            world = (options[current].1)();
             reset = false;
         }
         if reset_camera {
@@ -55,7 +57,14 @@ async fn main() {
         set_camera(&view.camera());
         draw_velocities(&world);
         draw_bodies(&world);
-        draw_ui(&mut speed, &mut paused, &mut reset, &mut reset_camera);
+        draw_ui(
+            &options,
+            &mut current,
+            &mut speed,
+            &mut paused,
+            &mut reset,
+            &mut reset_camera,
+        );
 
         next_frame().await
     }
@@ -135,15 +144,24 @@ fn draw_velocity(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> 
     Ok(())
 }
 
-fn draw_ui(speed: &mut f64, paused: &mut bool, reset: &mut bool, reset_camera: &mut bool) {
+fn draw_ui(
+    options: &[(String, fn() -> World)],
+    current: &mut usize,
+    speed: &mut f64,
+    paused: &mut bool,
+    reset: &mut bool,
+    reset_camera: &mut bool,
+) {
     egui_macroquad::ui(|ctx| {
-        draw_controls_ui(ctx, paused, reset, speed, reset_camera);
+        draw_controls_ui(ctx, options, current, paused, reset, speed, reset_camera);
     });
     egui_macroquad::draw();
 }
 
 fn draw_controls_ui(
     ctx: &Context,
+    options: &[(String, fn() -> World)],
+    current: &mut usize,
     paused: &mut bool,
     reset: &mut bool,
     speed: &mut f64,
@@ -163,6 +181,18 @@ fn draw_controls_ui(
         .default_pos([12.0, 12.0])
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
+                let before = *current;
+                egui::ComboBox::from_id_salt("scene")
+                    .selected_text(options[*current].0.as_str())
+                    .show_ui(ui, |ui| {
+                        for (i, (name, _)) in options.iter().enumerate() {
+                            ui.selectable_value(current, i, name.as_str());
+                        }
+                    });
+                if *current != before {
+                    *reset = true;
+                }
+
                 let status_icon = if *paused { "▶" } else { "⏸" };
                 if ui
                     .button(status_icon)
