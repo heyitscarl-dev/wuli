@@ -94,7 +94,7 @@ fn handles_cover_every_body() {
         "handles() should list every body in insertion order"
     );
     for handle in handles {
-        assert!(w.body(handle) == Some(&w.bodies[handle]));
+        assert!(w.body(handle).ok() == Some(&w.bodies[handle]));
     }
 }
 
