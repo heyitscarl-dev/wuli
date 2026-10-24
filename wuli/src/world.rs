@@ -1,4 +1,4 @@
-use glam::DVec2;
+use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
@@ -13,6 +13,17 @@ pub struct World {
 }
 
 impl World {
+    pub fn new(gravity: f64) -> Self {
+        Self {
+            gravity: dvec2(0.0, gravity),
+            bodies: Default::default(),
+        }
+    }
+
+    pub fn add_body(&mut self, body: RigidBody) -> BodyHandle {
+        self.bodies.insert(body)
+    }
+
     pub fn step(&mut self, dt: f64) {
         for (_, b) in &mut self.bodies {
             if b.inv_mass == 0.0 {
