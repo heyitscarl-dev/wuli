@@ -15,7 +15,7 @@ impl CouldCollide for (AxisAlignedBoundingBox, AxisAlignedBoundingBox) {
     }
 }
 
-pub fn get_possible_collisions(world: &World) -> Vec<(BodyHandle, BodyHandle)> {
+pub fn get_possible_collisions(world: &World, dt: f64) -> Vec<(BodyHandle, BodyHandle)> {
     let mut pairs: Vec<(BodyHandle, BodyHandle)> = Vec::new();
 
     // FIXME: Switch to a (e.g.) grid based approach to solve O(n²)
@@ -25,8 +25,8 @@ pub fn get_possible_collisions(world: &World) -> Vec<(BodyHandle, BodyHandle)> {
         for hb in &handles[i + 1..] {
             let a = world.body(*ha).expect("expected body to exist");
             let b = world.body(*hb).expect("expected body to exist");
-            let a_box = AxisAlignedBoundingBox::from_body(a);
-            let b_box = AxisAlignedBoundingBox::from_body(b);
+            let a_box = AxisAlignedBoundingBox::enlarged_from_body(a, dt);
+            let b_box = AxisAlignedBoundingBox::enlarged_from_body(b, dt);
             if !(a_box, b_box).could_collide() {
                 continue;
             }
@@ -43,6 +43,8 @@ mod tests {
     use super::*;
     use crate::RigidBody;
     use glam::{DVec2, dvec2};
+
+    const DT: f64 = 1.0 / 60.0;
 
     fn aabb(min: (f64, f64), max: (f64, f64)) -> AxisAlignedBoundingBox {
         AxisAlignedBoundingBox {
@@ -102,13 +104,13 @@ mod tests {
             DVec2::ZERO,
             vec![ball(0.0, 0.0), ball(10.0, 0.0), ball(0.0, 10.0)],
         );
-        assert!(get_possible_collisions(&w).is_empty());
+        assert!(get_possible_collisions(&w, DT).is_empty());
     }
 
     #[test]
     fn no_self_pairs() {
         let (w, _) = world(DVec2::ZERO, vec![ball(0.0, 0.0)]);
-        assert!(get_possible_collisions(&w).is_empty());
+        assert!(get_possible_collisions(&w, DT).is_empty());
     }
 
     #[test]
@@ -117,7 +119,7 @@ mod tests {
             DVec2::ZERO,
             vec![ball(0.0, 0.0), ball(0.8, 0.0), ball(10.0, 0.0)],
         );
-        let pairs = get_possible_collisions(&w);
+        let pairs = get_possible_collisions(&w, DT);
         assert!(!pairs.is_empty());
         assert!(
             pairs
@@ -129,12 +131,27 @@ mod tests {
     #[test]
     fn each_pair_reported_once() {
         let (w, _) = world(DVec2::ZERO, vec![ball(0.0, 0.0), ball(0.8, 0.0)]);
-        let pairs = get_possible_collisions(&w);
+        let pairs = get_possible_collisions(&w, DT);
         assert_eq!(
             pairs.len(),
             1,
             "pair (0, 1) was reported {} times",
             pairs.len()
         );
+    }
+
+    #[test]
+    fn fast_body_is_paired_before_touching() {
+        // 1 m gap, closing at 120 m/s → covered within one frame of |v|·dt = 2 m
+        let mut fast = ball(0.0, 0.0);
+        fast.velocity = dvec2(120.0, 0.0);
+        let (w, _) = world(DVec2::ZERO, vec![fast, ball(2.0, 0.0)]);
+        assert_eq!(get_possible_collisions(&w, DT).len(), 1);
+    }
+
+    #[test]
+    fn slow_body_beyond_margin_is_not_paired() {
+        let (w, _) = world(DVec2::ZERO, vec![ball(0.0, 0.0), ball(2.0, 0.0)]);
+        assert!(get_possible_collisions(&w, DT).is_empty());
     }
 }
