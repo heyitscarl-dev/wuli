@@ -1785,6 +1785,7 @@ version = "0.1.0"
 dependencies = [
  "glam 0.34.1",
  "slotmap",
+ "thiserror",
 ]
 
 [[package]]

@@ -2,6 +2,7 @@ use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
+    HandleNotFound,
     body::{BodyHandle, RigidBody},
     collision,
 };
@@ -54,11 +55,18 @@ impl World {
         self.bodies.keys().collect()
     }
 
-    pub fn body(&self, handle: BodyHandle) -> Option<&RigidBody> {
-        self.bodies.get(handle)
+    pub fn body(&self, handle: BodyHandle) -> Result<&RigidBody, HandleNotFound> {
+        self.bodies.get(handle).ok_or(HandleNotFound)
     }
 
-    pub fn body_mut(&mut self, handle: BodyHandle) -> Option<&mut RigidBody> {
-        self.bodies.get_mut(handle)
+    pub fn body_mut(&mut self, handle: BodyHandle) -> Result<&mut RigidBody, HandleNotFound> {
+        self.bodies.get_mut(handle).ok_or(HandleNotFound)
+    }
+
+    pub fn bodies_mut<const N: usize>(
+        &mut self,
+        handles: [BodyHandle; N],
+    ) -> Result<[&mut RigidBody; N], HandleNotFound> {
+        self.bodies.get_disjoint_mut(handles).ok_or(HandleNotFound)
     }
 }
