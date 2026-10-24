@@ -1,139 +1,184 @@
+use egui::Context;
 use glam::DVec2;
 use macroquad::{
-    camera::{Camera2D, set_camera},
-    color::{BLACK, GREEN, ORANGE, RED},
-    input::{
-        KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down, mouse_position,
-        mouse_wheel,
-    },
-    shapes::{draw_circle, draw_rectangle_lines, draw_triangle},
+    camera::set_camera,
+    color::{Color, RED, WHITE},
+    input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
+    shapes::{draw_circle, draw_line},
     time::get_frame_time,
-    window::{clear_background, next_frame, screen_height, screen_width},
+    window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
+    HandleNotFound, World,
     body::{BodyHandle, Shape},
-    collision::{aabb::AxisAlignedBoundingBox, broad::get_possible_collisions},
 };
 
-const DT: f64 = 1.0 / 240.0; // run physics at 240 Hz
+use crate::view::View;
 
-type DisplayVec2 = macroquad::math::Vec2;
-
-struct View {
-    centre: DVec2,
-    width: f64,
-}
-
-impl View {
-    fn camera(&self) -> Camera2D {
-        let w = self.width as f32;
-        let h = w * screen_height() / screen_width();
-        Camera2D {
-            target: DisplayVec2::ZERO,
-            zoom: macroquad::math::vec2(2.0 / w, -2.0 / h),
-            ..Default::default()
-        }
-    }
-
-    fn to_camera(&self, p: DVec2) -> DisplayVec2 {
-        let r = p - self.centre;
-        macroquad::math::vec2(r.x as f32, r.y as f32)
-    }
-}
+pub mod view;
 
 #[macroquad::main("wuli")]
 async fn main() {
-    let mut view = View {
-        centre: DVec2 { x: 2.5, y: -2.5 },
-        width: 10.0,
-    };
-    let mut last_mouse: Option<(f32, f32)> = None;
+    let scene = wuli_scenes::colliding_circles_a();
+    let mut world = scene.clone();
+    let mut view = View::new(0.0, 0.0, 10.0);
 
-    let initial = wuli_scenes::colliding_circles_a();
-    let mut world = initial.clone();
+    let mut accumulator = 0.0;
+    let dt = 1.0 / 240.0;
+
+    let mut speed = 1.0;
     let mut paused = false;
+    let mut reset = false;
+    let mut reset_camera = false;
 
-    let mut accumulator: f64 = 0.0;
+    let mut last_mouse = None;
 
     loop {
-        if is_key_pressed(KeyCode::Space) {
-            paused = !paused;
+        if reset {
+            world = scene.clone();
+            reset = false;
+        }
+        if reset_camera {
+            view.centre = DVec2::ZERO;
+            reset_camera = false;
         }
 
-        if is_key_pressed(KeyCode::R) {
-            world = initial.clone();
-            accumulator = 0.0;
-        }
+        tick(
+            &mut world,
+            &mut accumulator,
+            dt,
+            if !paused { speed } else { 0.0 },
+        );
+        handle_controls(&mut view, &mut last_mouse);
 
-        if paused {
-            if is_key_down(KeyCode::Period) || is_key_pressed(KeyCode::Comma) {
-                world.step(DT);
-            }
-        } else {
-            accumulator += get_frame_time() as f64;
-            while accumulator >= DT {
-                world.step(DT);
-                accumulator -= DT;
-            }
-        }
-
-        let (_, wheel) = mouse_wheel();
-        if wheel > 0.0 {
-            view.width *= 0.9;
-        }
-        if wheel < 0.0 {
-            view.width *= 1.1;
-        }
-
-        let mouse = mouse_position();
-        if is_mouse_button_down(MouseButton::Right) {
-            if let Some(last_mouse) = last_mouse {
-                let m_per_px = view.width / screen_width() as f64;
-                view.centre.x -= (mouse.0 - last_mouse.0) as f64 * m_per_px;
-                view.centre.y += (mouse.1 - last_mouse.1) as f64 * m_per_px;
-            }
-            last_mouse = Some(mouse);
-        } else {
-            last_mouse = None;
-        }
-
-        clear_background(BLACK);
+        clear_background(Color::from_rgba(10, 10, 10, 255));
         set_camera(&view.camera());
-
-        let pairs = get_possible_collisions(&world, DT)
-            .into_iter()
-            .flat_map(|(a, b)| [a, b])
-            .collect::<Vec<BodyHandle>>();
-
-        for handle in world.handles() {
-            let body = world.body(handle).expect("expected body to exist");
-            let c = view.to_camera(body.position);
-            let aabb = AxisAlignedBoundingBox::from_body(body);
-            match body.shape {
-                Shape::Circle { radius } => draw_circle(c.x, c.y, radius as f32, ORANGE),
-                Shape::Rectangle { half_extents: h } => {
-                    let [a, b, c, d] = Shape::rect_corners(body.position, body.angle, h);
-                    let a = view.to_camera(a);
-                    let b = view.to_camera(b);
-                    let c = view.to_camera(c);
-                    let d = view.to_camera(d);
-                    draw_triangle(a, b, c, ORANGE);
-                    draw_triangle(a, c, d, ORANGE);
-                }
-            }
-            let min = view.to_camera(aabb.min);
-            let max = view.to_camera(aabb.max);
-            let size = max - min;
-            draw_rectangle_lines(
-                min.x,
-                min.y,
-                size.x,
-                size.y,
-                0.075,
-                if pairs.contains(&handle) { GREEN } else { RED },
-            );
-        }
+        draw_velocities(&world);
+        draw_bodies(&world);
+        draw_ui(&mut speed, &mut paused, &mut reset, &mut reset_camera);
 
         next_frame().await
     }
+}
+
+fn tick(world: &mut World, accumulator: &mut f64, dt: f64, speed: f64) {
+    *accumulator += get_frame_time() as f64 * speed;
+    while *accumulator > dt {
+        world.step(dt);
+        *accumulator -= dt;
+    }
+}
+
+fn handle_controls(view: &mut View, last_mouse: &mut Option<(f32, f32)>) {
+    // Zoom
+    let (_, wheel) = mouse_wheel();
+    if wheel > 0.0 {
+        view.width *= 0.9;
+    }
+    if wheel < 0.0 {
+        view.width *= 1.1;
+    }
+
+    // Pan
+    let mouse = mouse_position();
+    if is_mouse_button_down(MouseButton::Right) {
+        if let Some(last_mouse) = last_mouse {
+            let m_per_px = view.width / screen_width() as f64;
+            view.centre.x -= (mouse.0 - last_mouse.0) as f64 * m_per_px;
+            view.centre.y += (mouse.1 - last_mouse.1) as f64 * m_per_px;
+        }
+        *last_mouse = Some(mouse);
+    } else {
+        *last_mouse = None;
+    }
+}
+
+fn draw_bodies(world: &World) {
+    world.bodies.iter().for_each(|(handle, _)| {
+        let _ = draw_body(world, handle);
+    });
+}
+
+fn draw_velocities(world: &World) {
+    world.bodies.iter().for_each(|(handle, _)| {
+        let _ = draw_velocity(world, handle);
+    });
+}
+
+fn draw_body(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> {
+    let body = world.body(body)?;
+    let centre = body.position;
+
+    match body.shape {
+        Shape::Circle { radius } => {
+            draw_circle(centre.x as f32, centre.y as f32, radius as f32, WHITE)
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn draw_velocity(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> {
+    let body = world.body(body)?;
+    let centre = body.position;
+    let dest = centre + body.velocity * 0.1;
+    draw_line(
+        centre.x as f32,
+        centre.y as f32,
+        dest.x as f32,
+        dest.y as f32,
+        0.025,
+        RED,
+    );
+
+    Ok(())
+}
+
+fn draw_ui(speed: &mut f64, paused: &mut bool, reset: &mut bool, reset_camera: &mut bool) {
+    egui_macroquad::ui(|ctx| {
+        draw_controls_ui(ctx, paused, reset, speed, reset_camera);
+    });
+    egui_macroquad::draw();
+}
+
+fn draw_controls_ui(
+    ctx: &Context,
+    paused: &mut bool,
+    reset: &mut bool,
+    speed: &mut f64,
+    reset_camera: &mut bool,
+) {
+    if ctx.input(|i| i.key_pressed(egui::Key::Space)) && !ctx.wants_keyboard_input() {
+        *paused = !*paused;
+    }
+    if ctx.input(|i| i.key_pressed(egui::Key::R)) && !ctx.wants_keyboard_input() {
+        *reset = true;
+    }
+
+    egui::Window::new("controls")
+        .title_bar(false)
+        .resizable(false)
+        .movable(false)
+        .default_pos([12.0, 12.0])
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let status_icon = if *paused { "▶" } else { "⏸" };
+                if ui
+                    .button(status_icon)
+                    .on_hover_text("Pause and Play")
+                    .clicked()
+                {
+                    *paused = !*paused;
+                }
+                if ui.button("↺").on_hover_text("Reset Scene").clicked() {
+                    *reset = true;
+                }
+                if ui.button("⌖").on_hover_text("Reset Camera").clicked() {
+                    *reset_camera = true;
+                }
+
+                ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
+            });
+        });
 }
