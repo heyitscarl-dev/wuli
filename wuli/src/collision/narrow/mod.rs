@@ -14,6 +14,7 @@ pub struct Collision {
     pub contact: DVec2,
     pub a: BodyHandle,
     pub b: BodyHandle,
+    pub lambda: f64,
 }
 
 pub fn get_collision(world: &World, body_a: BodyHandle, body_b: BodyHandle) -> Option<Collision> {

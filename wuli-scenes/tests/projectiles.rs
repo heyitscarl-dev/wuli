@@ -3,6 +3,9 @@ use wuli_scenes::{NORMAL_GRAVITY, projectile::projectiles_a};
 
 const DT: f64 = 1.0 / 240.0;
 
+// Velocity is derived from positions, v = (x − prev) / h, so it carries rounding error
+const EPS: f64 = 1e-8;
+
 fn run(world: &mut World, seconds: f64) {
     for _ in 0..(seconds / DT).round() as usize {
         world.step(DT);
@@ -26,8 +29,8 @@ fn approaching_before_collision() {
     let mut w = projectiles_a();
     let h = w.handles();
     run(&mut w, 1.0);
-    assert_eq!(w.bodies[h[0]].velocity.x, 2.0);
-    assert_eq!(w.bodies[h[1]].velocity.x, -2.0);
+    assert!((w.bodies[h[0]].velocity.x - 2.0).abs() < EPS);
+    assert!((w.bodies[h[1]].velocity.x + 2.0).abs() < EPS);
 }
 
 #[test]
@@ -77,5 +80,5 @@ fn both_fall_identically() {
     let (a, b) = (&w.bodies[h[0]], &w.bodies[h[1]]);
     assert_eq!(a.position.y, b.position.y);
     assert_eq!(a.velocity.y, b.velocity.y);
-    assert!((a.velocity.y - 2.0 * NORMAL_GRAVITY).abs() < 1e-9);
+    assert!((a.velocity.y - 2.0 * NORMAL_GRAVITY).abs() < EPS);
 }

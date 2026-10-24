@@ -23,6 +23,7 @@ pub fn get_circle_circle_collision(
         normal,
         depth,
         contact,
+        lambda: 0.0,
     })
 }
 

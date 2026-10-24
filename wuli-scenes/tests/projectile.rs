@@ -1,3 +1,4 @@
+use wuli::world::SUBSTEPS;
 use wuli_scenes::{NORMAL_GRAVITY, projectile_a};
 
 /// Runs projectile_a for 1 s with `steps` steps and returns the final position.
@@ -40,9 +41,10 @@ fn test_projectile_a() {
         steps * 2
     );
 
-    // First-order (semi-implicit) Euler: |y error| = ½·|g|·dt exactly for constant g.
+    // First-order (semi-implicit) Euler: |y error| = ½·|g|·h exactly for constant g,
+    // where h = dt / SUBSTEPS is the size of each integration step.
     let err1 = expected_y - y1;
-    let predicted = 0.5 * NORMAL_GRAVITY.abs() * dt;
+    let predicted = 0.5 * NORMAL_GRAVITY.abs() * dt / SUBSTEPS as f64;
     assert!(
         (err1.abs() - predicted).abs() < 1e-6,
         "y error {err1:e}, predicted magnitude {predicted:e} for first-order Euler"

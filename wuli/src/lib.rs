@@ -1,5 +1,6 @@
 pub mod body;
 pub mod collision;
+pub mod constraints;
 pub mod world;
 
 pub use body::RigidBody;

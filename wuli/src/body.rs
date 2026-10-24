@@ -6,9 +6,13 @@ new_key_type! { pub struct BodyHandle; }
 #[derive(PartialEq, Clone)]
 pub struct RigidBody {
     pub position: DVec2,
+    pub prev_position: DVec2,
     pub angle: f64,
+    pub prev_angle: f64,
     pub velocity: DVec2,
+    pub prev_velocity: DVec2,
     pub angular_velocity: f64,
+    pub prev_angular_velocity: f64,
     pub inv_mass: f64,
     pub inv_inertia: f64,
     pub shape: Shape,
@@ -35,10 +39,14 @@ impl RigidBody {
         Self {
             shape,
             position,
+            prev_position: position,
             velocity,
+            prev_velocity: velocity,
             inv_mass,
             angle: 0.0,
+            prev_angle: 0.0,
             angular_velocity: 0.0,
+            prev_angular_velocity: 0.0,
             inv_inertia,
         }
     }
