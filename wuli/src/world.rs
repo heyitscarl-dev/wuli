@@ -40,7 +40,7 @@ impl World {
             b.angle += b.angular_velocity * dt;
         }
 
-        let collision_pairs = collision::broad::get_possible_collisions(self);
+        let collision_pairs = collision::broad::get_possible_collisions(self, dt);
         for pair in collision_pairs {
             let collision = collision::narrow::get_collision(self, pair.0, pair.1);
             if collision.is_none() {

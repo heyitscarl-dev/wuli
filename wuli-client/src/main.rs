@@ -100,7 +100,7 @@ async fn main() {
         clear_background(BLACK);
         set_camera(&view.camera());
 
-        let pairs = get_possible_collisions(&world)
+        let pairs = get_possible_collisions(&world, DT)
             .into_iter()
             .flat_map(|(a, b)| [a, b])
             .collect::<Vec<BodyHandle>>();
