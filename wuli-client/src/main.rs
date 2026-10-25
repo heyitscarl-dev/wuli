@@ -146,10 +146,10 @@ fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFo
         Shape::Rectangle { half_extents } => {
             let extents = half_extents * 2.0;
             draw_rectangle_ex(x, y, extents.x as f32, extents.y as f32, DrawRectangleParams { 
-                rotation: body.angle as f32, color: FILL, ..Default::default() 
+                rotation: body.angle as f32, color: FILL, offset: vec2(0.5, 0.5)
             });
             draw_rectangle_lines_ex(x, y, extents.x as f32, extents.y as f32, LINE_PX * px, DrawRectangleParams { 
-                rotation: body.angle as f32, color: INK, ..Default::default() 
+                rotation: body.angle as f32, color: INK, offset: vec2(0.5, 0.5)
             });
         }
     }
