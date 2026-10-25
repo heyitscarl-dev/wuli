@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use glam::{DVec2, dvec2};
 use slotmap::new_key_type;
 
@@ -114,6 +116,17 @@ impl Shape {
             Shape::Rectangle { half_extents } => {
                 let local = DVec2::from_angle(-angle).rotate(point - position);
                 local.abs().cmple(half_extents).all()
+            }
+        }
+    }
+}
+
+impl Display for Shape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Shape::Circle { radius: r } => write!(f, "Circle (r = {})", r),
+            Shape::Rectangle { half_extents: h } => {
+                write!(f, "Rectangle (w = {}, h = {})", h.x * 2.0, h.y * 2.0)
             }
         }
     }
