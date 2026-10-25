@@ -2,6 +2,16 @@
 
 A 2D rigid-body physics engine in Rust, using Extended Position Based Dynamics (XPBD).
 
+<p align="center">
+  <img src="docs/screenshots/galton-board.png" alt="Galton Board" width="49%">
+  <img src="docs/screenshots/billiards-break.png" alt="Billiards Break" width="49%">
+  <img src="docs/screenshots/newtons-row.png" alt="Newton's Row" width="49%">
+  <img src="docs/screenshots/spinning-bar.png" alt="Spinning Bar" width="49%">
+</p>
+<p align="center">
+  <sub>Galton Board, Billiards Break, Newton's Row and Spinning Bar, with velocity arrows. See <a href="#scenes">Scenes</a>.</sub>
+</p>
+
 ## Workspace
 
 | Crate | What it is |
@@ -39,8 +49,10 @@ The inspector shows the selected body's shape and mass, and lets you edit its po
 | Newton's Row | A striker hits a row of resting balls, between two walls |
 | Billiards Break | A cue ball breaks a rack of 15 balls on a table with cushions |
 | Counting π | A ball 100× heavier pushes a light one against a wall: 31 collisions, the first digits of π |
-| Spinning Bar | Two balls hit opposite ends of a free bar, so it spins in place |
+| Spinning Bar | Two balls hit opposite ends of a free bar and set it spinning |
 | Galton Board | Balls fall through a grid of pegs into bins |
+
+### As a library
 
 ```rust
 use glam::{DVec2, dvec2};
