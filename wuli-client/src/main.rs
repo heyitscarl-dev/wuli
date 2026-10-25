@@ -355,43 +355,46 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
             let body = world
                 .body_mut(*selected)
                 .expect("expected selected body to exist");
-            let position = &mut body.position;
-            let velocity = &mut body.velocity;
-            ui.horizontal(|ui| {
+    
+            ui.label(egui::RichText::new("Physical Quantities").underline());
+            egui::Grid::new("quantities").striped(true).show(ui, |ui| {
+                // Shape
                 ui.label("Shape: ");
                 ui.label(format!("{}", body.shape));
-            });
-            ui.horizontal(|ui| {
+                ui.end_row();
+
+                // Mass
                 ui.label("Mass: ");
                 ui.label(if body.inv_mass == 0.0 {
                     "Static".to_string()
                 } else {
                     format!("{:.2}", 1.0 / body.inv_mass)
                 });
-            });
-            ui.horizontal(|ui| {
+                ui.end_row();
+
                 ui.label("x: ");
-                ui_vector_field(ui, position);
-            });
-            ui.horizontal(|ui| {
+                ui_vector_field(ui, &mut body.position);
+                ui.end_row();
+
                 ui.label("v: ");
-                ui_vector_field(ui, velocity);
-            });
-            ui.horizontal(|ui| {
+                ui_vector_field(ui, &mut body.velocity);
+                ui.end_row();
+
                 ui.label("θ: ");
                 ui.add(egui::DragValue::new(&mut body.angle).custom_parser(|v| {
                     v.parse::<f64>().ok().and_then(|v| Some(v.to_radians()))
                 }).custom_formatter(|v, _| {
                     format!("{:.2}", v.to_degrees())
-                }))
-            });
-            ui.horizontal(|ui| {
+                }));
+                ui.end_row();
+
                 ui.label("ω: ");
                 ui.add(egui::DragValue::new(&mut body.angular_velocity).custom_parser(|v| {
                     v.parse::<f64>().ok().and_then(|v| Some(v.to_radians()))
                 }).custom_formatter(|v, _| {
                     format!("{:.2}", v.to_degrees())
-                }))
+                }));
+                ui.end_row();
             });
         });
 }
@@ -399,9 +402,12 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
 fn ui_vector_field(ui: &mut egui::Ui, vector: &mut DVec2) {
     let (x, y) = (&mut vector.x, &mut vector.y);
 
-    ui.label("(");
-    ui.add(egui::DragValue::new(x));
-    ui.label("|");
-    ui.add(egui::DragValue::new(y));
-    ui.label(")");
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0; // tighter, like a written vector
+        ui.label("(");
+        ui.add(egui::DragValue::new(x));
+        ui.label("|");
+        ui.add(egui::DragValue::new(y));
+        ui.label(")");
+    });
 }
