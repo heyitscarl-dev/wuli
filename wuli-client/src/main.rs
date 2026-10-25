@@ -1,7 +1,16 @@
 use egui::{Align, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::DVec2;
 use macroquad::{
-    camera::set_camera, color::Color, input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{DrawRectangleParams, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex, draw_rectangle_lines_ex, draw_triangle}, time::get_frame_time, window::{clear_background, next_frame, screen_width},
+    camera::set_camera,
+    color::Color,
+    input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
+    math::{Vec2, vec2},
+    shapes::{
+        DrawRectangleParams, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex,
+        draw_rectangle_lines_ex, draw_triangle,
+    },
+    time::get_frame_time,
+    window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
     HandleNotFound, World,
@@ -142,15 +151,32 @@ fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFo
             // \draw[fill=gray!20] (x, y) circle (r);
             draw_poly(x, y, 64, radius as f32, 0.0, FILL);
             draw_poly_lines(x, y, 64, radius as f32, 0.0, LINE_PX * px, INK);
-        },
+        }
         Shape::Rectangle { half_extents } => {
             let extents = half_extents * 2.0;
-            draw_rectangle_ex(x, y, extents.x as f32, extents.y as f32, DrawRectangleParams { 
-                rotation: body.angle as f32, color: FILL, offset: vec2(0.5, 0.5)
-            });
-            draw_rectangle_lines_ex(x, y, extents.x as f32, extents.y as f32, LINE_PX * px, DrawRectangleParams { 
-                rotation: body.angle as f32, color: INK, offset: vec2(0.5, 0.5)
-            });
+            draw_rectangle_ex(
+                x,
+                y,
+                extents.x as f32,
+                extents.y as f32,
+                DrawRectangleParams {
+                    rotation: body.angle as f32,
+                    color: FILL,
+                    offset: vec2(0.5, 0.5),
+                },
+            );
+            draw_rectangle_lines_ex(
+                x,
+                y,
+                extents.x as f32,
+                extents.y as f32,
+                LINE_PX * px,
+                DrawRectangleParams {
+                    rotation: body.angle as f32,
+                    color: INK,
+                    offset: vec2(0.5, 0.5),
+                },
+            );
         }
     }
 

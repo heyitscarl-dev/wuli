@@ -50,17 +50,29 @@ impl RigidBody {
             inv_inertia,
         }
     }
-    
-    pub fn rectangle(position: DVec2, velocity: DVec2, inv_mass: f64, half_extents: DVec2, angle: f64, angular_velocity: f64) -> Self {
+
+    pub fn rectangle(
+        position: DVec2,
+        velocity: DVec2,
+        inv_mass: f64,
+        half_extents: DVec2,
+        angle: f64,
+        angular_velocity: f64,
+    ) -> Self {
         let shape = Shape::Rectangle { half_extents };
         let inv_inertia = 1.0 / shape.inertia(1.0 / inv_mass);
         Self {
-            shape, 
-            position, prev_position: position,
-            velocity, prev_velocity: velocity,
-            inv_mass, inv_inertia,
-            angle, prev_angle: angle, 
-            angular_velocity, prev_angular_velocity: angular_velocity
+            shape,
+            position,
+            prev_position: position,
+            velocity,
+            prev_velocity: velocity,
+            inv_mass,
+            inv_inertia,
+            angle,
+            prev_angle: angle,
+            angular_velocity,
+            prev_angular_velocity: angular_velocity,
         }
     }
 }

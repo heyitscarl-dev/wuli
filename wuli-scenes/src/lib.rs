@@ -13,7 +13,7 @@ pub fn available() -> Vec<(String, fn() -> World)> {
     vec![
         ("Projectile".to_string(), projectile_a),
         ("Colliding Circles".to_string(), colliding_circles_a),
-        ("Colliding Rectangles".to_string(), colliding_rectangles_a)
+        ("Colliding Rectangles".to_string(), colliding_rectangles_a),
     ]
 }
 
