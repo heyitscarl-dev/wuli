@@ -1,13 +1,7 @@
 use egui::{Align, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::DVec2;
 use macroquad::{
-    camera::set_camera,
-    color::Color,
-    input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
-    math::{Vec2, vec2},
-    shapes::{draw_line, draw_poly, draw_poly_lines, draw_triangle},
-    time::get_frame_time,
-    window::{clear_background, next_frame, screen_width},
+    camera::set_camera, color::Color, input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{DrawRectangleParams, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex, draw_rectangle_lines_ex, draw_triangle}, time::get_frame_time, window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
     HandleNotFound, World,
@@ -148,8 +142,16 @@ fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFo
             // \draw[fill=gray!20] (x, y) circle (r);
             draw_poly(x, y, 64, radius as f32, 0.0, FILL);
             draw_poly_lines(x, y, 64, radius as f32, 0.0, LINE_PX * px, INK);
+        },
+        Shape::Rectangle { half_extents } => {
+            let extents = half_extents * 2.0;
+            draw_rectangle_ex(x, y, extents.x as f32, extents.y as f32, DrawRectangleParams { 
+                rotation: body.angle as f32, color: FILL, ..Default::default() 
+            });
+            draw_rectangle_lines_ex(x, y, extents.x as f32, extents.y as f32, LINE_PX * px, DrawRectangleParams { 
+                rotation: body.angle as f32, color: INK, ..Default::default() 
+            });
         }
-        _ => {}
     }
 
     Ok(())
@@ -235,45 +237,44 @@ fn draw_controls_ui(
         *show_debug = !*show_debug;
     }
 
-    egui::TopBottomPanel::top("controls")
-        .show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                let before = *current;
-                egui::ComboBox::from_id_salt("scene")
-                    .selected_text(options[*current].0.as_str())
-                    .show_ui(ui, |ui| {
-                        for (i, (name, _)) in options.iter().enumerate() {
-                            ui.selectable_value(current, i, name.as_str());
-                        }
-                    });
-                if *current != before {
-                    *reset = true;
-                }
-
-                let status_text = if *paused { "▶" } else { "⏸" };
-                if ui.button(status_text).clicked() {
-                    *paused = !*paused;
-                }
-                if ui
-                    .button("Reset Scene")
-                    .on_hover_text("Reset Scene")
-                    .clicked()
-                {
-                    *reset = true;
-                }
-                if ui
-                    .button("Reset Camera")
-                    .on_hover_text("Reset Camera")
-                    .clicked()
-                {
-                    *reset_camera = true;
-                }
-                ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
-                ui.with_layout(Layout::right_to_left(Align::Max), |ui| {
-                    ui.toggle_value(show_debug, "Show Debug");
+    egui::TopBottomPanel::top("controls").show(ctx, |ui| {
+        ui.horizontal(|ui| {
+            let before = *current;
+            egui::ComboBox::from_id_salt("scene")
+                .selected_text(options[*current].0.as_str())
+                .show_ui(ui, |ui| {
+                    for (i, (name, _)) in options.iter().enumerate() {
+                        ui.selectable_value(current, i, name.as_str());
+                    }
                 });
+            if *current != before {
+                *reset = true;
+            }
+
+            let status_text = if *paused { "▶" } else { "⏸" };
+            if ui.button(status_text).clicked() {
+                *paused = !*paused;
+            }
+            if ui
+                .button("Reset Scene")
+                .on_hover_text("Reset Scene")
+                .clicked()
+            {
+                *reset = true;
+            }
+            if ui
+                .button("Reset Camera")
+                .on_hover_text("Reset Camera")
+                .clicked()
+            {
+                *reset_camera = true;
+            }
+            ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
+            ui.with_layout(Layout::right_to_left(Align::Max), |ui| {
+                ui.toggle_value(show_debug, "Show Debug");
             });
         });
+    });
 }
 
 fn draw_debug_ui(ctx: &Context, velocities: &mut bool) {
