@@ -6,12 +6,14 @@ pub use projectile::projectile_a;
 
 pub mod collision;
 pub use collision::colliding_circles_a;
+pub use collision::colliding_rectangles_a;
 use wuli::World;
 
 pub fn available() -> Vec<(String, fn() -> World)> {
     vec![
         ("Projectile".to_string(), projectile_a),
         ("Colliding Circles".to_string(), colliding_circles_a),
+        ("Colliding Rectangles".to_string(), colliding_rectangles_a)
     ]
 }
 
