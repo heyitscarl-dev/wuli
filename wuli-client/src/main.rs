@@ -1,10 +1,11 @@
-use egui::Context;
+use egui::{Align, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::DVec2;
 use macroquad::{
     camera::set_camera,
-    color::{Color, RED, WHITE},
+    color::Color,
     input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
-    shapes::{draw_circle, draw_line},
+    math::{Vec2, vec2},
+    shapes::{draw_line, draw_poly, draw_poly_lines, draw_triangle},
     time::get_frame_time,
     window::{clear_background, next_frame, screen_width},
 };
@@ -16,6 +17,13 @@ use wuli::{
 use crate::view::View;
 
 pub mod view;
+
+// TikZ look: black ink and gray!20 fills on white paper, strokes a fixed number of pixels wide
+const PAPER: Color = Color::new(1.0, 1.0, 1.0, 1.0);
+// gray!20: 20% of TikZ gray (50% black) mixed with white
+const FILL: Color = Color::new(0.9, 0.9, 0.9, 1.0);
+const INK: Color = Color::new(0.0, 0.0, 0.0, 1.0);
+const LINE_PX: f32 = 2.5;
 
 #[macroquad::main("wuli")]
 async fn main() {
@@ -56,14 +64,17 @@ async fn main() {
         );
         handle_controls(&mut view, &mut last_mouse);
 
-        clear_background(Color::from_rgba(10, 10, 10, 255));
+        clear_background(PAPER);
         set_camera(&view.camera());
+        // World units per screen pixel, so strokes keep their width when zooming
+        let px = (view.width / screen_width() as f64) as f32;
+        draw_bodies(&world, px);
         if velocities {
-            draw_velocities(&world);
+            draw_velocities(&world, px);
         }
-        draw_bodies(&world);
 
         egui_macroquad::ui(|ctx| {
+            ctx.set_visuals(tikz_visuals());
             draw_controls_ui(
                 ctx,
                 &options,
@@ -116,25 +127,27 @@ fn handle_controls(view: &mut View, last_mouse: &mut Option<(f32, f32)>) {
     }
 }
 
-fn draw_bodies(world: &World) {
+fn draw_bodies(world: &World, px: f32) {
     world.bodies.iter().for_each(|(handle, _)| {
-        let _ = draw_body(world, handle);
+        let _ = draw_body(world, handle, px);
     });
 }
 
-fn draw_velocities(world: &World) {
+fn draw_velocities(world: &World, px: f32) {
     world.bodies.iter().for_each(|(handle, _)| {
-        let _ = draw_velocity(world, handle);
+        let _ = draw_velocity(world, handle, px);
     });
 }
 
-fn draw_body(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> {
+fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFound> {
     let body = world.body(body)?;
-    let centre = body.position;
+    let (x, y) = (body.position.x as f32, body.position.y as f32);
 
     match body.shape {
         Shape::Circle { radius } => {
-            draw_circle(centre.x as f32, centre.y as f32, radius as f32, WHITE)
+            // \draw[fill=gray!20] (x, y) circle (r);
+            draw_poly(x, y, 64, radius as f32, 0.0, FILL);
+            draw_poly_lines(x, y, 64, radius as f32, 0.0, LINE_PX * px, INK);
         }
         _ => {}
     }
@@ -142,20 +155,64 @@ fn draw_body(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> {
     Ok(())
 }
 
-fn draw_velocity(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> {
+fn draw_velocity(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFound> {
     let body = world.body(body)?;
-    let centre = body.position;
-    let dest = centre + body.velocity * 0.1;
-    draw_line(
-        centre.x as f32,
-        centre.y as f32,
-        dest.x as f32,
-        dest.y as f32,
-        0.025,
-        RED,
+    let tip = body.position + body.velocity * 0.1;
+    draw_arrow(
+        vec2(body.position.x as f32, body.position.y as f32),
+        vec2(tip.x as f32, tip.y as f32),
+        px,
     );
 
     Ok(())
+}
+
+/// A `->`-style arrow with a TikZ "stealth" tip
+fn draw_arrow(start: Vec2, tip: Vec2, px: f32) {
+    let (length, width) = (8.0 * px, 3.5 * px);
+    let Some(dir) = (tip - start).try_normalize() else {
+        return;
+    };
+    if start.distance(tip) < length {
+        return;
+    }
+
+    let normal = dir.perp() * width;
+    let base = tip - dir * length;
+    let notch = tip - dir * length * 0.7;
+
+    draw_line(start.x, start.y, notch.x, notch.y, LINE_PX * px, INK);
+    draw_triangle(tip, base + normal, notch, INK);
+    draw_triangle(tip, notch, base - normal, INK);
+}
+
+/// Light egui theme with square corners, thin black outlines and no shadows
+fn tikz_visuals() -> Visuals {
+    let mut visuals = Visuals::light();
+    let ink = Stroke::new(1.0_f32, Color32::BLACK);
+
+    visuals.window_fill = Color32::WHITE;
+    visuals.panel_fill = Color32::WHITE;
+    visuals.window_stroke = ink;
+    visuals.window_corner_radius = CornerRadius::ZERO;
+    visuals.menu_corner_radius = CornerRadius::ZERO;
+    visuals.window_shadow = Shadow::NONE;
+    visuals.popup_shadow = Shadow::NONE;
+
+    let w = &mut visuals.widgets;
+    for state in [
+        &mut w.noninteractive,
+        &mut w.inactive,
+        &mut w.hovered,
+        &mut w.active,
+        &mut w.open,
+    ] {
+        state.corner_radius = CornerRadius::ZERO;
+    }
+    w.inactive.bg_stroke = ink;
+    w.hovered.bg_stroke = ink;
+
+    visuals
 }
 
 fn draw_controls_ui(
@@ -178,11 +235,7 @@ fn draw_controls_ui(
         *show_debug = !*show_debug;
     }
 
-    egui::Window::new("Controls")
-        .title_bar(false)
-        .resizable(false)
-        .movable(false)
-        .default_pos([12.0, 12.0])
+    egui::TopBottomPanel::top("controls")
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let before = *current;
@@ -215,10 +268,11 @@ fn draw_controls_ui(
                 {
                     *reset_camera = true;
                 }
-                ui.toggle_value(show_debug, "Show Debug");
+                ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
+                ui.with_layout(Layout::right_to_left(Align::Max), |ui| {
+                    ui.toggle_value(show_debug, "Show Debug");
+                });
             });
-
-            ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
         });
 }
 
