@@ -1,8 +1,8 @@
 use egui::{Align, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
-use glam::DVec2;
+use glam::{DVec2, dvec2};
 use macroquad::{
     camera::set_camera,
-    color::Color,
+    color::{Color, ORANGE},
     input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
     math::{Vec2, vec2},
     shapes::{
@@ -46,6 +46,7 @@ async fn main() {
     let mut show_debug = false;
 
     let mut velocities = false;
+    let mut selected = None;
 
     let mut last_mouse = None;
 
@@ -65,13 +66,13 @@ async fn main() {
             dt,
             if !paused { speed } else { 0.0 },
         );
-        handle_controls(&mut view, &mut last_mouse);
+        handle_controls(&world, &mut view, &mut last_mouse, &mut selected);
 
         clear_background(PAPER);
         set_camera(&view.camera());
         // World units per screen pixel, so strokes keep their width when zooming
         let px = (view.width / screen_width() as f64) as f32;
-        draw_bodies(&world, px);
+        draw_bodies(&world, px, &selected);
         if velocities {
             draw_velocities(&world, px);
         }
@@ -98,6 +99,15 @@ async fn main() {
     }
 }
 
+fn get_body_under_mouse(world: &World, view: &View) -> Option<BodyHandle> {
+    let mouse = mouse_position();
+    let mouse = view
+        .camera()
+        .screen_to_world(macroquad::math::vec2(mouse.0, mouse.1));
+    let point = dvec2(mouse.x as f64, mouse.y as f64);
+    world.body_at(point)
+}
+
 fn tick(world: &mut World, accumulator: &mut f64, dt: f64, speed: f64) {
     *accumulator += get_frame_time() as f64 * speed;
     while *accumulator > dt {
@@ -106,7 +116,16 @@ fn tick(world: &mut World, accumulator: &mut f64, dt: f64, speed: f64) {
     }
 }
 
-fn handle_controls(view: &mut View, last_mouse: &mut Option<(f32, f32)>) {
+fn handle_controls(
+    world: &World,
+    view: &mut View,
+    last_mouse: &mut Option<(f32, f32)>,
+    selected: &mut Option<BodyHandle>,
+) {
+    if is_mouse_button_down(MouseButton::Left) {
+        *selected = get_body_under_mouse(world, view);
+    }
+
     // Zoom
     let (_, wheel) = mouse_wheel();
     if wheel > 0.0 {
@@ -130,9 +149,9 @@ fn handle_controls(view: &mut View, last_mouse: &mut Option<(f32, f32)>) {
     }
 }
 
-fn draw_bodies(world: &World, px: f32) {
+fn draw_bodies(world: &World, px: f32, selected: &Option<BodyHandle>) {
     world.bodies.iter().for_each(|(handle, _)| {
-        let _ = draw_body(world, handle, px);
+        let _ = draw_body(world, handle, px, selected);
     });
 }
 
@@ -142,7 +161,17 @@ fn draw_velocities(world: &World, px: f32) {
     });
 }
 
-fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFound> {
+fn draw_body(
+    world: &World,
+    body: BodyHandle,
+    px: f32,
+    selected: &Option<BodyHandle>,
+) -> Result<(), HandleNotFound> {
+    let outline = if selected.is_some_and(|h| h == body) {
+        ORANGE
+    } else {
+        INK
+    };
     let body = world.body(body)?;
     let (x, y) = (body.position.x as f32, body.position.y as f32);
 
@@ -150,7 +179,7 @@ fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFo
         Shape::Circle { radius } => {
             // \draw[fill=gray!20] (x, y) circle (r);
             draw_poly(x, y, 64, radius as f32, 0.0, FILL);
-            draw_poly_lines(x, y, 64, radius as f32, 0.0, LINE_PX * px, INK);
+            draw_poly_lines(x, y, 64, radius as f32, 0.0, LINE_PX * px, outline);
         }
         Shape::Rectangle { half_extents } => {
             let extents = half_extents * 2.0;
@@ -173,7 +202,7 @@ fn draw_body(world: &World, body: BodyHandle, px: f32) -> Result<(), HandleNotFo
                 LINE_PX * px,
                 DrawRectangleParams {
                     rotation: body.angle as f32,
-                    color: INK,
+                    color: outline,
                     offset: vec2(0.5, 0.5),
                 },
             );
