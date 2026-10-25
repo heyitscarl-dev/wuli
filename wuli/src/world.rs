@@ -130,6 +130,13 @@ impl World {
         self.bodies.get(handle).ok_or(HandleNotFound)
     }
 
+    pub fn body_at(&self, point: DVec2) -> Option<BodyHandle> {
+        self.bodies
+            .iter()
+            .find(|(_, b)| b.shape.contains(b.position, b.angle, point))
+            .map(|(h, _)| h)
+    }
+
     pub fn body_mut(&mut self, handle: BodyHandle) -> Result<&mut RigidBody, HandleNotFound> {
         self.bodies.get_mut(handle).ok_or(HandleNotFound)
     }
