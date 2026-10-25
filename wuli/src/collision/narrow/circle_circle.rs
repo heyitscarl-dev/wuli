@@ -100,13 +100,4 @@ mod tests {
             c.normal
         );
     }
-
-    #[test]
-    fn non_circle_shapes_are_not_handled_yet() {
-        let (mut w, h) = two_balls(dvec2(0.0, 0.0), 1.0, dvec2(0.5, 0.0), 1.0);
-        w.bodies[h[1]].shape = crate::body::Shape::Rectangle {
-            half_extents: dvec2(1.0, 1.0),
-        };
-        assert!(get_collision(&w, h[0], h[1]).is_none());
-    }
 }
