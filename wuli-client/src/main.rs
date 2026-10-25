@@ -1,4 +1,4 @@
-use egui::{Align, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
+use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
     camera::set_camera,
@@ -66,7 +66,6 @@ async fn main() {
             dt,
             if !paused { speed } else { 0.0 },
         );
-        handle_controls(&world, &mut view, &mut last_mouse, &mut selected);
 
         clear_background(PAPER);
         set_camera(&view.camera());
@@ -79,6 +78,7 @@ async fn main() {
 
         egui_macroquad::ui(|ctx| {
             ctx.set_visuals(tikz_visuals());
+            handle_controls(ctx, &world, &mut view, &mut last_mouse, &mut selected);
             draw_controls_ui(
                 ctx,
                 &options,
@@ -91,6 +91,9 @@ async fn main() {
             );
             if show_debug {
                 draw_debug_ui(ctx, &mut velocities);
+            }
+            if let Some(selected) = selected {
+                draw_inspector_ui(ctx, &mut world, &selected);
             }
         });
         egui_macroquad::draw();
@@ -117,12 +120,13 @@ fn tick(world: &mut World, accumulator: &mut f64, dt: f64, speed: f64) {
 }
 
 fn handle_controls(
+    ctx: &Context,
     world: &World,
     view: &mut View,
     last_mouse: &mut Option<(f32, f32)>,
     selected: &mut Option<BodyHandle>,
 ) {
-    if is_mouse_button_down(MouseButton::Left) {
+    if is_mouse_button_down(MouseButton::Left) && !ctx.wants_pointer_input() {
         *selected = get_body_under_mouse(world, view);
     }
 
@@ -137,7 +141,7 @@ fn handle_controls(
 
     // Pan
     let mouse = mouse_position();
-    if is_mouse_button_down(MouseButton::Right) {
+    if is_mouse_button_down(MouseButton::Right) && !ctx.wants_pointer_input() {
         if let Some(last_mouse) = last_mouse {
             let m_per_px = view.width / screen_width() as f64;
             view.centre.x -= (mouse.0 - last_mouse.0) as f64 * m_per_px;
@@ -340,4 +344,64 @@ fn draw_debug_ui(ctx: &Context, velocities: &mut bool) {
         .show(ctx, |ui| {
             ui.checkbox(velocities, "Show Velocities");
         });
+}
+
+fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
+    egui::Window::new("Inspector")
+        .anchor(Align2::RIGHT_TOP, [-12.0, 40.0])
+        .default_open(true)
+        .resizable(true)
+        .show(ctx, |ui| {
+            let body = world
+                .body_mut(*selected)
+                .expect("expected selected body to exist");
+            let position = &mut body.position;
+            let velocity = &mut body.velocity;
+            ui.horizontal(|ui| {
+                ui.label("Shape: ");
+                ui.label(format!("{}", body.shape));
+            });
+            ui.horizontal(|ui| {
+                ui.label("Mass: ");
+                ui.label(if body.inv_mass == 0.0 {
+                    "Static".to_string()
+                } else {
+                    format!("{:.2}", 1.0 / body.inv_mass)
+                });
+            });
+            ui.horizontal(|ui| {
+                ui.label("x: ");
+                ui_vector_field(ui, position);
+            });
+            ui.horizontal(|ui| {
+                ui.label("v: ");
+                ui_vector_field(ui, velocity);
+            });
+            ui.horizontal(|ui| {
+                ui.label("θ: ");
+                ui.add(egui::DragValue::new(&mut body.angle).custom_parser(|v| {
+                    v.parse::<f64>().ok().and_then(|v| Some(v.to_radians()))
+                }).custom_formatter(|v, _| {
+                    format!("{:.2}", v.to_degrees())
+                }))
+            });
+            ui.horizontal(|ui| {
+                ui.label("ω: ");
+                ui.add(egui::DragValue::new(&mut body.angular_velocity).custom_parser(|v| {
+                    v.parse::<f64>().ok().and_then(|v| Some(v.to_radians()))
+                }).custom_formatter(|v, _| {
+                    format!("{:.2}", v.to_degrees())
+                }))
+            });
+        });
+}
+
+fn ui_vector_field(ui: &mut egui::Ui, vector: &mut DVec2) {
+    let (x, y) = (&mut vector.x, &mut vector.y);
+
+    ui.label("(");
+    ui.add(egui::DragValue::new(x));
+    ui.label("|");
+    ui.add(egui::DragValue::new(y));
+    ui.label(")");
 }
