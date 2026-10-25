@@ -107,6 +107,16 @@ impl Shape {
         ]
         .map(|local| pos + rot.rotate(local))
     }
+
+    pub fn contains(&self, position: DVec2, angle: f64, point: DVec2) -> bool {
+        match *self {
+            Shape::Circle { radius } => (point - position).length() <= radius,
+            Shape::Rectangle { half_extents } => {
+                let local = DVec2::from_angle(-angle).rotate(point - position);
+                local.abs().cmple(half_extents).all()
+            }
+        }
+    }
 }
 
 #[cfg(test)]

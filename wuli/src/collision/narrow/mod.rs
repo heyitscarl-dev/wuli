@@ -38,15 +38,13 @@ pub fn get_collision(world: &World, body_a: BodyHandle, body_b: BodyHandle) -> O
                 get_circle_rectangle_collision(world, body_b, body_a, *radius, *half_extents)
                     .ok()
                     .flatten();
-            collision.map(|c| {
-                Collision {
-                    a: body_a,
-                    b: body_b,
-                    normal: -c.normal,
-                    depth: c.depth,
-                    contact: c.contact,
-                    lambda: c.lambda,
-                }
+            collision.map(|c| Collision {
+                a: body_a,
+                b: body_b,
+                normal: -c.normal,
+                depth: c.depth,
+                contact: c.contact,
+                lambda: c.lambda,
             })
         }
         _ => None,
