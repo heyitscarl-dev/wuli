@@ -32,6 +32,9 @@ async fn main() {
     let mut paused = false;
     let mut reset = false;
     let mut reset_camera = false;
+    let mut show_debug = false;
+
+    let mut velocities = false;
 
     let mut last_mouse = None;
 
@@ -55,16 +58,27 @@ async fn main() {
 
         clear_background(Color::from_rgba(10, 10, 10, 255));
         set_camera(&view.camera());
-        draw_velocities(&world);
+        if velocities {
+            draw_velocities(&world);
+        }
         draw_bodies(&world);
-        draw_ui(
-            &options,
-            &mut current,
-            &mut speed,
-            &mut paused,
-            &mut reset,
-            &mut reset_camera,
-        );
+
+        egui_macroquad::ui(|ctx| {
+            draw_controls_ui(
+                ctx,
+                &options,
+                &mut current,
+                &mut paused,
+                &mut reset,
+                &mut speed,
+                &mut reset_camera,
+                &mut show_debug,
+            );
+            if show_debug {
+                draw_debug_ui(ctx, &mut velocities);
+            }
+        });
+        egui_macroquad::draw();
 
         next_frame().await
     }
@@ -144,20 +158,6 @@ fn draw_velocity(world: &World, body: BodyHandle) -> Result<(), HandleNotFound> 
     Ok(())
 }
 
-fn draw_ui(
-    options: &[(String, fn() -> World)],
-    current: &mut usize,
-    speed: &mut f64,
-    paused: &mut bool,
-    reset: &mut bool,
-    reset_camera: &mut bool,
-) {
-    egui_macroquad::ui(|ctx| {
-        draw_controls_ui(ctx, options, current, paused, reset, speed, reset_camera);
-    });
-    egui_macroquad::draw();
-}
-
 fn draw_controls_ui(
     ctx: &Context,
     options: &[(String, fn() -> World)],
@@ -166,6 +166,7 @@ fn draw_controls_ui(
     reset: &mut bool,
     speed: &mut f64,
     reset_camera: &mut bool,
+    show_debug: &mut bool,
 ) {
     if ctx.input(|i| i.key_pressed(egui::Key::Space)) && !ctx.wants_keyboard_input() {
         *paused = !*paused;
@@ -173,8 +174,11 @@ fn draw_controls_ui(
     if ctx.input(|i| i.key_pressed(egui::Key::R)) && !ctx.wants_keyboard_input() {
         *reset = true;
     }
+    if ctx.input(|i| i.key_pressed(egui::Key::D)) && !ctx.wants_keyboard_input() {
+        *show_debug = !*show_debug;
+    }
 
-    egui::Window::new("controls")
+    egui::Window::new("Controls")
         .title_bar(false)
         .resizable(false)
         .movable(false)
@@ -193,22 +197,37 @@ fn draw_controls_ui(
                     *reset = true;
                 }
 
-                let status_icon = if *paused { "▶" } else { "⏸" };
-                if ui
-                    .button(status_icon)
-                    .on_hover_text("Pause and Play")
-                    .clicked()
-                {
+                let status_text = if *paused { "▶" } else { "⏸" };
+                if ui.button(status_text).clicked() {
                     *paused = !*paused;
                 }
-                if ui.button("↺").on_hover_text("Reset Scene").clicked() {
+                if ui
+                    .button("Reset Scene")
+                    .on_hover_text("Reset Scene")
+                    .clicked()
+                {
                     *reset = true;
                 }
-                if ui.button("⌖").on_hover_text("Reset Camera").clicked() {
+                if ui
+                    .button("Reset Camera")
+                    .on_hover_text("Reset Camera")
+                    .clicked()
+                {
                     *reset_camera = true;
                 }
-
-                ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
+                ui.toggle_value(show_debug, "Show Debug");
             });
+
+            ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
+        });
+}
+
+fn draw_debug_ui(ctx: &Context, velocities: &mut bool) {
+    egui::Window::new("Debug")
+        .default_open(false)
+        .default_pos([12.0, 50.0])
+        .resizable(false)
+        .show(ctx, |ui| {
+            ui.checkbox(velocities, "Show Velocities");
         });
 }
