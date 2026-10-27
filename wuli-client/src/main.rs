@@ -1,7 +1,7 @@
 use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
-    camera::set_camera, color::{Color, DARKGRAY, LIME, ORANGE}, input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{
+    camera::set_camera, color::{Color, LIME, ORANGE}, input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{
         DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex, draw_rectangle_lines_ex, draw_triangle,
     }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
 };
@@ -64,10 +64,10 @@ async fn main() {
         // World units per screen pixel, so strokes keep their width when zooming
         let px = (view.width / screen_width() as f64) as f32;
         draw_bodies(&world, px, &selected);
-        draw_constraints(&world, px);
         if velocities {
             draw_velocities(&world, px);
         }
+        draw_constraints(&world, px, &selected);
 
         egui_macroquad::ui(|ctx| {
             ctx.set_visuals(tikz_visuals());
@@ -152,13 +152,19 @@ fn draw_bodies(world: &World, px: f32, selected: &Option<BodyHandle>) {
     });
 }
 
-fn draw_constraints(world: &World, px: f32) {
-    world.constraints.iter().for_each(|c| {
-        let _ = draw_constraint(world, px, c);
+fn draw_constraints(world: &World, px: f32, selected: &Option<BodyHandle>) {
+    world.constraints.iter().for_each(|(_, c)| {
+        let _ = draw_constraint(world, px, c, selected);
     });
 }
 
-fn draw_constraint(world: &World, px: f32, constraint: &Constraint) -> Result<(), HandleNotFound> {
+fn draw_constraint(world: &World, px: f32, constraint: &Constraint, selected: &Option<BodyHandle>) -> Result<(), HandleNotFound> {
+    let color = if selected.is_some_and(|h| constraint.bodies().contains(&h)) {
+        ORANGE
+    } else {
+        INK
+    };
+
     match constraint {
         Constraint::Distance { constraint: DistanceConstraint { a, b, .. } } => {
             let a = world.body(*a)?;
@@ -168,7 +174,7 @@ fn draw_constraint(world: &World, px: f32, constraint: &Constraint) -> Result<()
                 a.position.y as f32, 
                 b.position.x as f32, 
                 b.position.y as f32,
-                px, DARKGRAY
+                LINE_PX * px, color
             );
         },
         Constraint::Contact { collision } => {
@@ -420,6 +426,13 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
                 );
                 ui.end_row();
             });
+
+            ui.label(egui::RichText::new("Constraints").underline());
+            world.constraints.iter()
+                .filter(|(_, c)| c.bodies().contains(selected))
+                .for_each(|(_, c)| {
+                    ui.label(format!("{}", c.to_string())); // TODO: constraint naming!
+                });
         });
 }
 

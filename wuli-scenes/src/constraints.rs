@@ -1,7 +1,7 @@
 use glam::dvec2;
 use wuli::{RigidBody, World, constraints::{Constraint, distance::DistanceConstraint}};
 
-use crate::NORMAL_GRAVITY;
+use crate::{NORMAL_GRAVITY, ZERO_GRAVITY};
 
 pub fn simple_pendulum() -> World {
     let anchor = RigidBody::circle(

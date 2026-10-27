@@ -1,10 +1,8 @@
-use std::collections::HashSet;
-
 use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
-    HandleNotFound, body::{BodyHandle, RigidBody}, collision::{self, narrow::Collision}, constraints::{self, Constraint, xpbd::scalar_cross_product},
+    HandleNotFound, body::{BodyHandle, RigidBody}, collision::{self, narrow::Collision}, constraints::{Constraint, ConstraintHandle},
 };
 
 pub const SUBSTEPS: usize = 20; // FIXME: Optimal?
@@ -13,7 +11,7 @@ pub const SUBSTEPS: usize = 20; // FIXME: Optimal?
 pub struct World {
     pub gravity: DVec2, // e.g. $g =-9.81m/s^2$
     pub bodies: SlotMap<BodyHandle, RigidBody>,
-    pub constraints: Vec<Constraint>,
+    pub constraints: SlotMap<ConstraintHandle, Constraint>,
 }
 
 impl World {
@@ -28,8 +26,8 @@ impl World {
         self.bodies.insert(body)
     }
 
-    pub fn add_constraint(&mut self, constraint: Constraint) {
-        self.constraints.push(constraint);
+    pub fn add_constraint(&mut self, constraint: Constraint) -> ConstraintHandle {
+        self.constraints.insert(constraint)
     }
 
     fn collect_possible_collisions(&self, dt: f64) -> Vec<(BodyHandle, BodyHandle)> {
@@ -100,13 +98,15 @@ impl World {
     fn accumulate_constraints(&self, possible_collisions: &Vec<(BodyHandle, BodyHandle)>) -> Vec<Constraint> {
         // XPBD can handle collisions as simple constraints. This merges the processes of collision and
         // constraint solving into one, simplifying the pipeline. 
-        let mut constraints = self.constraints.clone();
+        let constraints = self.constraints.clone();
         let pseudo_constraints = self.collect_collisions(possible_collisions)
             .into_iter()
             .map(|collision| Constraint::Contact { collision });
 
-        constraints.extend(pseudo_constraints);
-        constraints
+        constraints.iter()
+            .map(|(_, constraint)| constraint.clone())
+            .chain(pseudo_constraints)
+            .collect()
     }
 
     pub fn substep(

@@ -1,10 +1,16 @@
+use std::fmt::Display;
+
+use slotmap::new_key_type;
+
 use crate::{
-    HandleNotFound, World, collision::narrow::Collision, constraints::{self, distance::DistanceConstraint, xpbd::apply_correction},
+    HandleNotFound, World, body::BodyHandle, collision::narrow::Collision, constraints::{self, distance::DistanceConstraint, xpbd::apply_correction},
 };
 
 pub mod xpbd;
 pub mod contact;
 pub mod distance;
+
+new_key_type! { pub struct ConstraintHandle; }
 
 #[derive(Debug, Clone)]
 pub enum Constraint {
@@ -34,27 +40,18 @@ impl Constraint {
             }
         }
     }
-}
 
-// TODO: Move!!
-pub fn handle_collision(
-    world: &mut World,
-    collision: &mut Collision,
-    h: f64,
-) -> Result<(), HandleNotFound> {
-    let a = world.body(collision.a)?;
-    let b = world.body(collision.b)?;
+    pub fn bodies(&self) -> Vec<BodyHandle> {
+        match self {
+            Self::Contact { collision } => vec![collision.a, collision.b],
+            Self::Distance { constraint } => vec![constraint.a, constraint.b]
+        }
+    }
 
-    apply_correction(
-        world,
-        collision.a,
-        collision.b,
-        collision.normal,
-        -collision.depth,
-        collision.contact - a.position,
-        collision.contact - b.position,
-        0.0,
-        &mut collision.lambda,
-        h,
-    )
+    pub fn to_string(&self) -> String {
+        match self {
+            Self::Contact { .. } => format!("Contact"),
+            Self::Distance { .. } => format!("Distance")
+        }
+    }
 }
