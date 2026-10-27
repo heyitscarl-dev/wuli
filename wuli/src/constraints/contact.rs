@@ -1,7 +1,5 @@
 use crate::{
-    HandleNotFound, World,
-    collision::narrow::Collision,
-    constraints::xpbd::{apply_correction, scalar_cross_product},
+    HandleNotFound, World, collision::narrow::{Collision, get_collision}, constraints::xpbd::{apply_correction, scalar_cross_product},
 };
 
 pub fn solve_contact_positions(
@@ -9,6 +7,14 @@ pub fn solve_contact_positions(
     collision: &mut Collision,
     h: f64,
 ) -> Result<(), HandleNotFound> {
+    let Some(current) = get_collision(world, collision.a, collision.b) else {
+        return Ok(()); // already separated
+    };
+
+    collision.normal = current.normal;
+    collision.depth = current.depth;
+    collision.contact = current.contact;
+
     let a = world.body(collision.a)?;
     let b = world.body(collision.b)?;
 

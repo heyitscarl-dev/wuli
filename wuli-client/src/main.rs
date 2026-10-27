@@ -155,7 +155,8 @@ fn handle_controls(
                 mouse_position().1,
             ));
             let body = world.body(select.unwrap()).unwrap();
-            let anchor = (dvec2(mouse.x as f64, mouse.y as f64) - body.position).rotate_angle(-body.angle);
+            let anchor =
+                (dvec2(mouse.x as f64, mouse.y as f64) - body.position).rotate_angle(-body.angle);
 
             let pin = PinConstraint {
                 body: select.unwrap(),
@@ -187,7 +188,12 @@ fn handle_controls(
             if let Ok(Constraint {
                 kind:
                     ConstraintKind::Pin {
-                        constraint: PinConstraint { target, body: body_handle, .. },
+                        constraint:
+                            PinConstraint {
+                                target,
+                                body: body_handle,
+                                ..
+                            },
                     },
                 ..
             }) = world.constraint_mut(*handle)

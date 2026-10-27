@@ -1,7 +1,9 @@
 use glam::DVec2;
 
 use crate::{
-    HandleNotFound, World, body::BodyHandle, constraints::xpbd::{apply_single_body_correction, scalar_cross_product},
+    HandleNotFound, World,
+    body::BodyHandle,
+    constraints::xpbd::{apply_single_body_correction, scalar_cross_product},
 };
 
 #[derive(Debug, Clone)]
