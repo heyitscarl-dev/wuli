@@ -2,10 +2,7 @@ use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
-    HandleNotFound,
-    body::{BodyHandle, RigidBody},
-    collision::{self, narrow::Collision},
-    constraints::{Constraint, ConstraintHandle},
+    HandleNotFound, body::{BodyHandle, RigidBody}, collision::{self, narrow::Collision}, constraints::{Constraint, ConstraintHandle, ConstraintKind},
 };
 
 pub const SUBSTEPS: usize = 20; // FIXME: Optimal?
@@ -109,7 +106,7 @@ impl World {
         let pseudo_constraints = self
             .collect_collisions(possible_collisions)
             .into_iter()
-            .map(|collision| Constraint::Contact { collision });
+            .map(|collision| Constraint { kind: ConstraintKind::Contact { collision }, soft: false });
 
         constraints
             .iter()
@@ -126,9 +123,19 @@ impl World {
         self.integrate_positions(h);
         let mut constraints = self.accumulate_constraints(possible_collisions);
 
-        constraints
-            .iter_mut()
-            .for_each(|constraint| constraint.solve_positions(self, h));
+        const ITERATIONS: usize = 4;
+        for _ in 0..ITERATIONS {
+            // solve soft constraints first, so they get overriden later
+            constraints
+                .iter_mut()
+                .filter(|constraint| constraint.soft)
+                .for_each(|constraint| constraint.kind.solve_positions(self, h));
+
+            constraints
+                .iter_mut()
+                .filter(|constraint| !constraint.soft)
+                .for_each(|constraint| constraint.kind.solve_positions(self, h));
+        }
 
         // let mut collisions = self.collect_collisions(&possible_collisions);
         // for collision in &mut collisions {
@@ -144,7 +151,7 @@ impl World {
 
         constraints
             .iter_mut()
-            .for_each(|constraint| constraint.solve_velocities(self, h));
+            .for_each(|constraint| constraint.kind.solve_velocities(self, h));
 
         Ok(constraints)
     }
@@ -155,6 +162,17 @@ impl World {
 
     pub fn body(&self, handle: BodyHandle) -> Result<&RigidBody, HandleNotFound> {
         self.bodies.get(handle).ok_or(HandleNotFound)
+    }
+
+    pub fn constraint(&self, handle: ConstraintHandle) -> Result<&Constraint, HandleNotFound> {
+        self.constraints.get(handle).ok_or(HandleNotFound)
+    }
+
+    pub fn constraint_mut(
+        &mut self,
+        handle: ConstraintHandle,
+    ) -> Result<&mut Constraint, HandleNotFound> {
+        self.constraints.get_mut(handle).ok_or(HandleNotFound)
     }
 
     pub fn body_at(&self, point: DVec2) -> Option<BodyHandle> {

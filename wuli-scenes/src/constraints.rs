@@ -1,7 +1,6 @@
 use glam::dvec2;
 use wuli::{
-    RigidBody, World,
-    constraints::{Constraint, distance::DistanceConstraint},
+    RigidBody, World, constraints::{Constraint, ConstraintKind, distance::DistanceConstraint},
 };
 
 use crate::NORMAL_GRAVITY;
@@ -12,7 +11,7 @@ pub fn simple_pendulum() -> World {
     let mut world = World::new(NORMAL_GRAVITY);
     let a = world.add_body(anchor);
     let b = world.add_body(bob);
-    let distance = Constraint::Distance {
+    let distance = Constraint { kind: ConstraintKind::Distance {
         constraint: DistanceConstraint {
             a,
             b,
@@ -20,7 +19,7 @@ pub fn simple_pendulum() -> World {
             compliance: 0.0,
             lambda: 0.0,
         },
-    };
+    }, soft: false };
     world.add_constraint(distance);
     world
 }
@@ -33,7 +32,7 @@ pub fn double_pendulum() -> World {
     let a = world.add_body(anchor);
     let b = world.add_body(bob1);
     let c = world.add_body(bob2);
-    let distance1 = Constraint::Distance {
+    let distance1 = Constraint { kind: ConstraintKind::Distance {
         constraint: DistanceConstraint {
             a,
             b,
@@ -41,8 +40,8 @@ pub fn double_pendulum() -> World {
             compliance: 0.0,
             lambda: 0.0,
         },
-    };
-    let distance2 = Constraint::Distance {
+    }, soft: false};
+    let distance2 = Constraint { kind: ConstraintKind::Distance {
         constraint: DistanceConstraint {
             a: b,
             b: c,
@@ -50,7 +49,7 @@ pub fn double_pendulum() -> World {
             compliance: 0.0,
             lambda: 0.0,
         },
-    };
+    }, soft: false };
     world.add_constraint(distance1);
     world.add_constraint(distance2);
     world

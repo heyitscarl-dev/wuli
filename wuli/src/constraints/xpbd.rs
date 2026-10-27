@@ -41,3 +41,31 @@ pub fn apply_correction(
 
     Ok(())
 }
+
+pub fn apply_single_body_correction(
+    world: &mut World,
+    handle: BodyHandle,
+    normal: DVec2,
+    error: f64,
+    relative: DVec2,
+    compliance: f64,
+    lambda: &mut f64,
+    h: f64,
+) -> Result<(), HandleNotFound> {
+    let body = world.body_mut(handle)?;
+
+    if body.inv_mass == 0.0 {
+        return Ok(());
+    } // skip static objects
+
+    let w = body.inv_mass + body.inv_inertia * scalar_cross_product(relative, normal) * scalar_cross_product(relative, normal);
+    let alpha = compliance / (h * h);
+    let dlambda = (-error - alpha * *lambda) / (w + alpha);
+    *lambda += dlambda;
+    let p = dlambda * normal;
+
+    body.position -= p * body.inv_mass;
+    body.angle -= body.inv_inertia * scalar_cross_product(relative, p);
+
+    Ok(())
+}
