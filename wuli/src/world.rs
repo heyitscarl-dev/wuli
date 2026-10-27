@@ -88,7 +88,7 @@ impl World {
         body.prev_angle = body.angle;
 
         // Semi-Implicit Euler
-        body.velocity += force * body.inv_inertia * h + gravity * h;
+        body.velocity += force * body.inv_mass * h + gravity * h;
         body.position += body.velocity * h;
 
         body.angular_velocity += torque * body.inv_inertia * h;
