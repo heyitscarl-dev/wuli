@@ -23,7 +23,9 @@ pub fn solve_distance_positions(
     let normal = delta.normalize();
     let error = delta.length() - constraint.distance;
 
-    if error < 1e-6 { return Ok(()); }
+    if error < 1e-6 {
+        return Ok(());
+    }
 
     apply_correction(
         world,

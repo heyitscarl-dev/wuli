@@ -2,7 +2,10 @@ use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
-    HandleNotFound, body::{BodyHandle, RigidBody}, collision::{self, narrow::Collision}, constraints::{Constraint, ConstraintHandle},
+    HandleNotFound,
+    body::{BodyHandle, RigidBody},
+    collision::{self, narrow::Collision},
+    constraints::{Constraint, ConstraintHandle},
 };
 
 pub const SUBSTEPS: usize = 20; // FIXME: Optimal?
@@ -57,26 +60,27 @@ impl World {
 
     /// Integrate forces, accelerations and velocities to update the positions of all bodies.
     fn integrate_positions(&mut self, h: f64) {
-        let bodies: Vec<BodyHandle> = self.bodies.iter_mut()
+        let bodies: Vec<BodyHandle> = self
+            .bodies
+            .iter_mut()
             .filter(|(_, body)| !body.is_static())
             .map(|(handle, _)| handle)
             .collect();
-        
+
         bodies.iter().for_each(|body| {
-            let _ = self.integrate_position(*body, h);   // ignore failed integrations
+            let _ = self.integrate_position(*body, h); // ignore failed integrations
         });
     }
 
     /// Integrate forces, accelerations and velocities to update the position of a single body.
-    fn integrate_position(&mut self, body: BodyHandle, h: f64) -> Result<(), HandleNotFound>{
+    fn integrate_position(&mut self, body: BodyHandle, h: f64) -> Result<(), HandleNotFound> {
         let gravity = self.gravity;
         let body = self.body_mut(body)?;
 
-        let force = DVec2::ZERO;    // TODO: force accumulation
+        let force = DVec2::ZERO; // TODO: force accumulation
         let torque = 0.0;
 
         debug_assert!(body.inv_mass != 0.0, "Cannot integrate static body!"); // static bodies should be filtered.
-
 
         // The next steps of XPBD update positions, without updating velocities.
         // We set `prev_position` and `prev_angle` to deduce velocities later.
@@ -95,15 +99,20 @@ impl World {
 
     /// Accumulate "real" constraints (distance, spring, etc.; predefined) with "pseudo" constraints,
     /// derived from collisions.
-    fn accumulate_constraints(&self, possible_collisions: &Vec<(BodyHandle, BodyHandle)>) -> Vec<Constraint> {
+    fn accumulate_constraints(
+        &self,
+        possible_collisions: &Vec<(BodyHandle, BodyHandle)>,
+    ) -> Vec<Constraint> {
         // XPBD can handle collisions as simple constraints. This merges the processes of collision and
-        // constraint solving into one, simplifying the pipeline. 
+        // constraint solving into one, simplifying the pipeline.
         let constraints = self.constraints.clone();
-        let pseudo_constraints = self.collect_collisions(possible_collisions)
+        let pseudo_constraints = self
+            .collect_collisions(possible_collisions)
             .into_iter()
             .map(|collision| Constraint::Contact { collision });
 
-        constraints.iter()
+        constraints
+            .iter()
             .map(|(_, constraint)| constraint.clone())
             .chain(pseudo_constraints)
             .collect()
@@ -117,7 +126,8 @@ impl World {
         self.integrate_positions(h);
         let mut constraints = self.accumulate_constraints(possible_collisions);
 
-        constraints.iter_mut()
+        constraints
+            .iter_mut()
             .for_each(|constraint| constraint.solve_positions(self, h));
 
         // let mut collisions = self.collect_collisions(&possible_collisions);
@@ -132,7 +142,8 @@ impl World {
             b.angular_velocity = (b.angle - b.prev_angle) / h;
         }
 
-        constraints.iter_mut()
+        constraints
+            .iter_mut()
             .for_each(|constraint| constraint.solve_velocities(self, h));
 
         Ok(constraints)

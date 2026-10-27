@@ -18,8 +18,8 @@ pub mod obstacles;
 pub use obstacles::galton_board;
 
 pub mod constraints;
-pub use constraints::simple_pendulum;
 pub use constraints::double_pendulum;
+pub use constraints::simple_pendulum;
 
 use glam::DVec2;
 use wuli::{RigidBody, World};
@@ -35,7 +35,7 @@ pub fn available() -> Vec<(String, fn() -> World)> {
         ("Spinning Bar".to_string(), spinning_bar),
         ("Galton Board".to_string(), galton_board),
         ("Simple Pendulum".to_string(), simple_pendulum),
-        ("Double Pendulum".to_string(), double_pendulum)
+        ("Double Pendulum".to_string(), double_pendulum),
     ]
 }
 

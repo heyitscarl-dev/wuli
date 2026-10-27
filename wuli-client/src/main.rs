@@ -1,12 +1,21 @@
 use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
-    camera::set_camera, color::{Color, LIME, ORANGE}, input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{
-        DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex, draw_rectangle_lines_ex, draw_triangle,
-    }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
+    camera::set_camera,
+    color::{Color, LIME, ORANGE},
+    input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
+    math::{Vec2, vec2},
+    shapes::{
+        DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex,
+        draw_rectangle_lines_ex, draw_triangle,
+    },
+    time::get_frame_time,
+    window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
-    HandleNotFound, World, body::{BodyHandle, Shape}, constraints::{Constraint, distance::DistanceConstraint},
+    HandleNotFound, World,
+    body::{BodyHandle, Shape},
+    constraints::{Constraint, distance::DistanceConstraint},
 };
 
 use crate::view::View;
@@ -158,7 +167,12 @@ fn draw_constraints(world: &World, px: f32, selected: &Option<BodyHandle>) {
     });
 }
 
-fn draw_constraint(world: &World, px: f32, constraint: &Constraint, selected: &Option<BodyHandle>) -> Result<(), HandleNotFound> {
+fn draw_constraint(
+    world: &World,
+    px: f32,
+    constraint: &Constraint,
+    selected: &Option<BodyHandle>,
+) -> Result<(), HandleNotFound> {
     let color = if selected.is_some_and(|h| constraint.bodies().contains(&h)) {
         ORANGE
     } else {
@@ -166,22 +180,26 @@ fn draw_constraint(world: &World, px: f32, constraint: &Constraint, selected: &O
     };
 
     match constraint {
-        Constraint::Distance { constraint: DistanceConstraint { a, b, .. } } => {
+        Constraint::Distance {
+            constraint: DistanceConstraint { a, b, .. },
+        } => {
             let a = world.body(*a)?;
             let b = world.body(*b)?;
             draw_line(
-                a.position.x as f32, 
-                a.position.y as f32, 
-                b.position.x as f32, 
+                a.position.x as f32,
+                a.position.y as f32,
+                b.position.x as f32,
                 b.position.y as f32,
-                LINE_PX * px, color
+                LINE_PX * px,
+                color,
             );
-        },
+        }
         Constraint::Contact { collision } => {
             draw_circle(
-                collision.contact.x as f32, 
-                collision.contact.y as f32, 
-                0.05, LIME
+                collision.contact.x as f32,
+                collision.contact.y as f32,
+                0.05,
+                LIME,
             );
         }
     }
@@ -358,7 +376,11 @@ fn draw_controls_ui(
             {
                 *reset_camera = true;
             }
-            ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x").step_by(0.01));
+            ui.add(
+                egui::Slider::new(speed, 0.0..=4.0)
+                    .suffix("x")
+                    .step_by(0.01),
+            );
             ui.with_layout(Layout::right_to_left(Align::Max), |ui| {
                 ui.toggle_value(show_debug, "Show Debug");
             });
@@ -413,7 +435,7 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
                 ui.label("θ: ");
                 ui.add(
                     egui::DragValue::new(&mut body.angle)
-                        .custom_parser(|v| v.parse::<f64>().ok().and_then(|v| Some(v.to_radians())))
+                        .custom_parser(|v| v.parse::<f64>().ok().map(|v| v.to_radians()))
                         .custom_formatter(|v, _| format!("{:.2}", v.to_degrees())),
                 );
                 ui.end_row();
@@ -421,14 +443,16 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
                 ui.label("ω: ");
                 ui.add(
                     egui::DragValue::new(&mut body.angular_velocity)
-                        .custom_parser(|v| v.parse::<f64>().ok().and_then(|v| Some(v.to_radians())))
+                        .custom_parser(|v| v.parse::<f64>().ok().map(|v| v.to_radians()))
                         .custom_formatter(|v, _| format!("{:.2}", v.to_degrees())),
                 );
                 ui.end_row();
             });
 
             ui.label(egui::RichText::new("Constraints").underline());
-            world.constraints.iter()
+            world
+                .constraints
+                .iter()
                 .filter(|(_, c)| c.bodies().contains(selected))
                 .for_each(|(_, c)| {
                     ui.label(format!("{}", c.to_string())); // TODO: constraint naming!
