@@ -154,14 +154,16 @@ fn handle_controls(
                 mouse_position().0,
                 mouse_position().1,
             ));
-            let anchor = dvec2(mouse.x as f64, mouse.y as f64)
-                - world.body(select.unwrap()).unwrap().position;
+            let body = world.body(select.unwrap()).unwrap();
+            let anchor = (dvec2(mouse.x as f64, mouse.y as f64) - body.position).rotate_angle(-body.angle);
 
             let pin = PinConstraint {
                 body: select.unwrap(),
                 local_anchor: anchor,
                 target: dvec2(mouse.x as f64, mouse.y as f64),
-                compliance: 0.0,
+                compliance: 1e-4 * body.inv_mass,
+                damping: 200.0,
+                angular_damping: 10.0,
                 lambda: 0.0,
             };
             let pin_handle = world.add_constraint(Constraint {
@@ -176,20 +178,22 @@ fn handle_controls(
     }
 
     if is_mouse_button_down(MouseButton::Left) && !ctx.wants_pointer_input() {
-        if let Some((handle, pin)) = dragging {
+        if let Some((handle, _)) = dragging {
             let mouse = view.camera().screen_to_world(macroquad::math::vec2(
                 mouse_position().0,
                 mouse_position().1,
             ));
+            let mut body = None;
             if let Ok(Constraint {
                 kind:
                     ConstraintKind::Pin {
-                        constraint: PinConstraint { target, .. },
+                        constraint: PinConstraint { target, body: body_handle, .. },
                     },
                 ..
             }) = world.constraint_mut(*handle)
             {
                 *target = dvec2(mouse.x as f64, mouse.y as f64);
+                body = Some(*body_handle);
             }
         }
     } else {
@@ -281,9 +285,10 @@ fn draw_constraint(
             ..
         } => {
             let body = world.body(constraint.body)?;
+            let anchor = constraint.local_anchor.rotate_angle(body.angle);
             draw_line(
-                body.position.x as f32 + constraint.local_anchor.x as f32,
-                body.position.y as f32 + constraint.local_anchor.y as f32,
+                body.position.x as f32 + anchor.x as f32,
+                body.position.y as f32 + anchor.y as f32,
                 constraint.target.x as f32,
                 constraint.target.y as f32,
                 LINE_PX * px,

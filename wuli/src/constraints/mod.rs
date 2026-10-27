@@ -58,8 +58,8 @@ impl ConstraintKind {
             Self::Distance { .. } => {
                 // no op
             }
-            Self::Pin { .. } => {
-                // no op
+            Self::Pin { constraint } => {
+                let _ = constraints::pin::solve_pin_velocities(world, constraint, h);
             }
         }
     }
