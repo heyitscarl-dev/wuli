@@ -6,7 +6,7 @@ use macroquad::{
     }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
-    HandleNotFound, World, body::{BodyHandle, Shape}, constraints::Constraint,
+    HandleNotFound, World, body::{BodyHandle, Shape}, constraints::{Constraint, distance::DistanceConstraint},
 };
 
 use crate::view::View;
@@ -153,14 +153,14 @@ fn draw_bodies(world: &World, px: f32, selected: &Option<BodyHandle>) {
 }
 
 fn draw_constraints(world: &World, px: f32) {
-    world.constraints().iter().for_each(|c| {
+    world.constraints.iter().for_each(|c| {
         let _ = draw_constraint(world, px, c);
     });
 }
 
 fn draw_constraint(world: &World, px: f32, constraint: &Constraint) -> Result<(), HandleNotFound> {
     match constraint {
-        Constraint::Distance { a, b, distance, stiffness } => {
+        Constraint::Distance { constraint: DistanceConstraint { a, b, .. } } => {
             let a = world.body(*a)?;
             let b = world.body(*b)?;
             draw_line(
@@ -390,9 +390,9 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
                 // Mass
                 ui.label("Mass: ");
                 ui.label(if body.inv_mass == 0.0 {
-                    "Static".to_string()
+                    "static".to_string()
                 } else {
-                    format!("{:.2}", 1.0 / body.inv_mass)
+                    format!("{:.2}", 1.0 / body.inv_mass).to_string()
                 });
                 ui.end_row();
 

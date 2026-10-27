@@ -1,5 +1,5 @@
 use crate::{
-    HandleNotFound, World, body::BodyHandle, collision::narrow::Collision, constraints::{self, xpbd::apply_correction},
+    HandleNotFound, World, collision::narrow::Collision, constraints::{self, distance::DistanceConstraint, xpbd::apply_correction},
 };
 
 pub mod xpbd;
@@ -8,7 +8,7 @@ pub mod distance;
 
 #[derive(Debug, Clone)]
 pub enum Constraint {
-    Distance { a: BodyHandle, b: BodyHandle, distance: f64, stiffness: f64 },
+    Distance { constraint: DistanceConstraint },
     Contact { collision: Collision }
 }
 
@@ -18,8 +18,8 @@ impl Constraint {
             Self::Contact { collision } => {
                 let _ = constraints::contact::solve_contact_positions(world, collision, h);
             },
-            Self::Distance { a, b, distance, stiffness } => {
-                // ignore for now...
+            Self::Distance { constraint } => {
+                let _ = constraints::distance::solve_distance_positions(world, constraint, h);
             }
         }
     }
@@ -29,8 +29,8 @@ impl Constraint {
             Self::Contact { collision } => {
                 let _ = constraints::contact::solve_contact_velocities(world, collision, h);
             },
-            Self::Distance { a, b, distance, stiffness } => {
-                // ignore for now...
+            Self::Distance { .. } => {
+                // no op
             }
         }
     }

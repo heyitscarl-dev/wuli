@@ -1,5 +1,5 @@
 use glam::dvec2;
-use wuli::{RigidBody, World, constraints::Constraint};
+use wuli::{RigidBody, World, constraints::{Constraint, distance::DistanceConstraint}};
 
 use crate::NORMAL_GRAVITY;
 
@@ -13,7 +13,7 @@ pub fn simple_pendulum() -> World {
     let mut world = World::new(NORMAL_GRAVITY);
     let a = world.add_body(anchor);
     let b = world.add_body(bob);
-    let distance = Constraint::Distance { a, b, distance: 1.0, stiffness: 1.0 };
+    let distance = Constraint::Distance { constraint: DistanceConstraint { a, b, distance: 1.0, compliance: 0.0, lambda: 0.0 } };
     world.add_constraint(distance);
     world
 }

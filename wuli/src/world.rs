@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
@@ -12,8 +14,6 @@ pub struct World {
     pub gravity: DVec2, // e.g. $g =-9.81m/s^2$
     pub bodies: SlotMap<BodyHandle, RigidBody>,
     pub constraints: Vec<Constraint>,
-    // FIXME: BROKEN!!
-    pub accumulated_constraints: Vec<Constraint>,  // accumulated constraints from the last step/substep
 }
 
 impl World {
@@ -109,18 +109,13 @@ impl World {
         constraints
     }
 
-    pub fn constraints(&self) -> &Vec<Constraint> {
-        &self.accumulated_constraints
-    }
-
     pub fn substep(
         &mut self,
         h: f64,
         possible_collisions: &Vec<(BodyHandle, BodyHandle)>,
-    ) -> Result<(), HandleNotFound> {
+    ) -> Result<Vec<Constraint>, HandleNotFound> {
         self.integrate_positions(h);
-        self.accumulated_constraints = self.accumulate_constraints(possible_collisions);
-        let mut constraints = self.accumulated_constraints.clone();
+        let mut constraints = self.accumulate_constraints(possible_collisions);
 
         constraints.iter_mut()
             .for_each(|constraint| constraint.solve_positions(self, h));
@@ -140,7 +135,7 @@ impl World {
         constraints.iter_mut()
             .for_each(|constraint| constraint.solve_velocities(self, h));
 
-        Ok(())
+        Ok(constraints)
     }
 
     pub fn handles(&self) -> Vec<BodyHandle> {
