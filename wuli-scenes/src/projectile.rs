@@ -20,7 +20,7 @@ fn projectiles(dx: f64, dy: f64, vxa: f64, vxb: f64, mr: f64) -> World {
     let gravity = dvec2(0.0, NORMAL_GRAVITY);
     let mut world = World {
         gravity,
-        bodies: Default::default(),
+        ..Default::default()
     };
     world.bodies.insert(body_a);
     world.bodies.insert(body_b);
@@ -33,7 +33,7 @@ fn projectile(vx: f64) -> World {
     let gravity = dvec2(0.0, NORMAL_GRAVITY);
     let mut world = World {
         gravity,
-        bodies: Default::default(),
+        ..Default::default()
     };
     world.bodies.insert(body);
     world

@@ -17,6 +17,9 @@ pub use rotation::spinning_bar;
 pub mod obstacles;
 pub use obstacles::galton_board;
 
+pub mod constraints;
+pub use constraints::simple_pendulum;
+
 use glam::DVec2;
 use wuli::{RigidBody, World};
 
@@ -30,6 +33,7 @@ pub fn available() -> Vec<(String, fn() -> World)> {
         ("Counting π".to_string(), counting_pi),
         ("Spinning Bar".to_string(), spinning_bar),
         ("Galton Board".to_string(), galton_board),
+        ("Simple Pendulum".to_string(), simple_pendulum)
     ]
 }
 

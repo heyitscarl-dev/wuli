@@ -12,6 +12,7 @@ use crate::{
 pub mod circle_circle;
 pub mod circle_rectangle;
 
+#[derive(Debug, Clone)]
 pub struct Collision {
     pub normal: DVec2,
     pub depth: f64,

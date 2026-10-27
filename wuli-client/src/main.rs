@@ -1,20 +1,12 @@
 use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
-    camera::set_camera,
-    color::{Color, ORANGE},
-    input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel},
-    math::{Vec2, vec2},
-    shapes::{
-        DrawRectangleParams, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex,
-        draw_rectangle_lines_ex, draw_triangle,
-    },
-    time::get_frame_time,
-    window::{clear_background, next_frame, screen_width},
+    camera::set_camera, color::{Color, DARKGRAY, LIME, ORANGE}, input::{MouseButton, is_mouse_button_down, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{
+        DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex, draw_rectangle_lines_ex, draw_triangle,
+    }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
-    HandleNotFound, World,
-    body::{BodyHandle, Shape},
+    HandleNotFound, World, body::{BodyHandle, Shape}, constraints::Constraint,
 };
 
 use crate::view::View;
@@ -40,7 +32,7 @@ async fn main() {
     let dt = 1.0 / 240.0;
 
     let mut speed = 1.0;
-    let mut paused = false;
+    let mut paused = true;
     let mut reset = false;
     let mut reset_camera = false;
     let mut show_debug = false;
@@ -72,6 +64,7 @@ async fn main() {
         // World units per screen pixel, so strokes keep their width when zooming
         let px = (view.width / screen_width() as f64) as f32;
         draw_bodies(&world, px, &selected);
+        draw_constraints(&world, px);
         if velocities {
             draw_velocities(&world, px);
         }
@@ -157,6 +150,37 @@ fn draw_bodies(world: &World, px: f32, selected: &Option<BodyHandle>) {
     world.bodies.iter().for_each(|(handle, _)| {
         let _ = draw_body(world, handle, px, selected);
     });
+}
+
+fn draw_constraints(world: &World, px: f32) {
+    world.constraints().iter().for_each(|c| {
+        let _ = draw_constraint(world, px, c);
+    });
+}
+
+fn draw_constraint(world: &World, px: f32, constraint: &Constraint) -> Result<(), HandleNotFound> {
+    match constraint {
+        Constraint::Distance { a, b, distance, stiffness } => {
+            let a = world.body(*a)?;
+            let b = world.body(*b)?;
+            draw_line(
+                a.position.x as f32, 
+                a.position.y as f32, 
+                b.position.x as f32, 
+                b.position.y as f32,
+                px, DARKGRAY
+            );
+        },
+        Constraint::Contact { collision } => {
+            draw_circle(
+                collision.contact.x as f32, 
+                collision.contact.y as f32, 
+                0.05, LIME
+            );
+        }
+    }
+
+    Ok(())
 }
 
 fn draw_velocities(world: &World, px: f32) {
@@ -328,7 +352,7 @@ fn draw_controls_ui(
             {
                 *reset_camera = true;
             }
-            ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x"));
+            ui.add(egui::Slider::new(speed, 0.0..=4.0).suffix("x").step_by(0.01));
             ui.with_layout(Layout::right_to_left(Align::Max), |ui| {
                 ui.toggle_value(show_debug, "Show Debug");
             });

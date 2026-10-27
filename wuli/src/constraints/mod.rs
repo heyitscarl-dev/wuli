@@ -1,8 +1,40 @@
 use crate::{
-    HandleNotFound, World, collision::narrow::Collision, constraints::xpbd::apply_correction,
+    HandleNotFound, World, body::BodyHandle, collision::narrow::Collision, constraints::{self, xpbd::apply_correction},
 };
 
 pub mod xpbd;
+pub mod contact;
+pub mod distance;
+
+#[derive(Debug, Clone)]
+pub enum Constraint {
+    Distance { a: BodyHandle, b: BodyHandle, distance: f64, stiffness: f64 },
+    Contact { collision: Collision }
+}
+
+impl Constraint {
+    pub fn solve_positions(&mut self, world: &mut World, h: f64) {
+        match self {
+            Self::Contact { collision } => {
+                let _ = constraints::contact::solve_contact_positions(world, collision, h);
+            },
+            Self::Distance { a, b, distance, stiffness } => {
+                // ignore for now...
+            }
+        }
+    }
+
+    pub fn solve_velocities(&mut self, world: &mut World, h: f64) {
+        match self {
+            Self::Contact { collision } => {
+                let _ = constraints::contact::solve_contact_velocities(world, collision, h);
+            },
+            Self::Distance { a, b, distance, stiffness } => {
+                // ignore for now...
+            }
+        }
+    }
+}
 
 // TODO: Move!!
 pub fn handle_collision(

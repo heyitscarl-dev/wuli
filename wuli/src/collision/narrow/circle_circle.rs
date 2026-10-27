@@ -38,7 +38,7 @@ mod tests {
     fn two_balls(a: DVec2, ra: f64, b: DVec2, rb: f64) -> (World, [BodyHandle; 2]) {
         let mut w = World {
             gravity: DVec2::ZERO,
-            bodies: Default::default(),
+            ..Default::default()
         };
         let ha = w.bodies.insert(RigidBody::circle(a, DVec2::ZERO, 1.0, ra));
         let hb = w.bodies.insert(RigidBody::circle(b, DVec2::ZERO, 1.0, rb));

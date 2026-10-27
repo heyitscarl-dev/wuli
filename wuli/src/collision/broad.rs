@@ -61,7 +61,7 @@ mod tests {
     fn world(gravity: DVec2, bodies: Vec<RigidBody>) -> (World, Vec<BodyHandle>) {
         let mut w = World {
             gravity,
-            bodies: Default::default(),
+            ..Default::default()
         };
         let handles = bodies.into_iter().map(|b| w.bodies.insert(b)).collect();
         (w, handles)

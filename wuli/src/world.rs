@@ -2,30 +2,34 @@ use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
-    HandleNotFound,
-    body::{BodyHandle, RigidBody},
-    collision::{self, narrow::Collision},
-    constraints::{self, xpbd::scalar_cross_product},
+    HandleNotFound, body::{BodyHandle, RigidBody}, collision::{self, narrow::Collision}, constraints::{self, Constraint, xpbd::scalar_cross_product},
 };
 
 pub const SUBSTEPS: usize = 20; // FIXME: Optimal?
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct World {
     pub gravity: DVec2, // e.g. $g =-9.81m/s^2$
     pub bodies: SlotMap<BodyHandle, RigidBody>,
+    pub constraints: Vec<Constraint>,
+    // FIXME: BROKEN!!
+    pub accumulated_constraints: Vec<Constraint>,  // accumulated constraints from the last step/substep
 }
 
 impl World {
     pub fn new(gravity: f64) -> Self {
         Self {
             gravity: dvec2(0.0, gravity),
-            bodies: Default::default(),
+            ..Default::default()
         }
     }
 
     pub fn add_body(&mut self, body: RigidBody) -> BodyHandle {
         self.bodies.insert(body)
+    }
+
+    pub fn add_constraint(&mut self, constraint: Constraint) {
+        self.constraints.push(constraint);
     }
 
     fn collect_possible_collisions(&self, dt: f64) -> Vec<(BodyHandle, BodyHandle)> {
@@ -53,33 +57,78 @@ impl World {
         }
     }
 
+    /// Integrate forces, accelerations and velocities to update the positions of all bodies.
+    fn integrate_positions(&mut self, h: f64) {
+        let bodies: Vec<BodyHandle> = self.bodies.iter_mut()
+            .filter(|(_, body)| !body.is_static())
+            .map(|(handle, _)| handle)
+            .collect();
+        
+        bodies.iter().for_each(|body| {
+            let _ = self.integrate_position(*body, h);   // ignore failed integrations
+        });
+    }
+
+    /// Integrate forces, accelerations and velocities to update the position of a single body.
+    fn integrate_position(&mut self, body: BodyHandle, h: f64) -> Result<(), HandleNotFound>{
+        let gravity = self.gravity;
+        let body = self.body_mut(body)?;
+
+        let force = DVec2::ZERO;    // TODO: force accumulation
+        let torque = 0.0;
+
+        debug_assert!(body.inv_mass != 0.0, "Cannot integrate static body!"); // static bodies should be filtered.
+
+
+        // The next steps of XPBD update positions, without updating velocities.
+        // We set `prev_position` and `prev_angle` to deduce velocities later.
+        body.prev_position = body.position;
+        body.prev_angle = body.angle;
+
+        // Semi-Implicit Euler
+        body.velocity += force * body.inv_inertia * h + gravity * h;
+        body.position += body.velocity * h;
+
+        body.angular_velocity += torque * body.inv_inertia * h;
+        body.angle += body.angular_velocity * h;
+
+        Ok(())
+    }
+
+    /// Accumulate "real" constraints (distance, spring, etc.; predefined) with "pseudo" constraints,
+    /// derived from collisions.
+    fn accumulate_constraints(&self, possible_collisions: &Vec<(BodyHandle, BodyHandle)>) -> Vec<Constraint> {
+        // XPBD can handle collisions as simple constraints. This merges the processes of collision and
+        // constraint solving into one, simplifying the pipeline. 
+        let mut constraints = self.constraints.clone();
+        let pseudo_constraints = self.collect_collisions(possible_collisions)
+            .into_iter()
+            .map(|collision| Constraint::Contact { collision });
+
+        constraints.extend(pseudo_constraints);
+        constraints
+    }
+
+    pub fn constraints(&self) -> &Vec<Constraint> {
+        &self.accumulated_constraints
+    }
+
     pub fn substep(
         &mut self,
         h: f64,
         possible_collisions: &Vec<(BodyHandle, BodyHandle)>,
     ) -> Result<(), HandleNotFound> {
-        for (_, b) in &mut self.bodies {
-            let force = 0.0; // TODO: Force accumulation
-            let torque = 0.0;
+        self.integrate_positions(h);
+        self.accumulated_constraints = self.accumulate_constraints(possible_collisions);
+        let mut constraints = self.accumulated_constraints.clone();
 
-            if b.inv_mass == 0.0 {
-                continue;
-            }
+        constraints.iter_mut()
+            .for_each(|constraint| constraint.solve_positions(self, h));
 
-            b.prev_position = b.position;
-            b.velocity += (self.gravity + force * b.inv_mass) * h; // Semi-implicit euler integration
-            b.position += b.velocity * h;
-
-            // FIXME: Torque/Angular velocity
-            b.prev_angle = b.angle;
-            b.angular_velocity += (torque) * h * b.inv_inertia; // incorrect?
-            b.angle += b.angular_velocity * h;
-        }
-
-        let mut collisions = self.collect_collisions(&possible_collisions);
-        for collision in &mut collisions {
-            constraints::handle_collision(self, collision, h)?;
-        }
+        // let mut collisions = self.collect_collisions(&possible_collisions);
+        // for collision in &mut collisions {
+        //    constraints::handle_collision(self, collision, h)?;
+        // }
 
         for (_, b) in &mut self.bodies {
             b.prev_velocity = b.velocity;
@@ -88,36 +137,8 @@ impl World {
             b.angular_velocity = (b.angle - b.prev_angle) / h;
         }
 
-        let e = 1.0; // perfectly elastic collisions
-        for collision in &mut collisions {
-            let [a, b] = self.bodies_mut([collision.a, collision.b])?;
-            let vn_before = collision.normal.dot(b.prev_velocity - a.prev_velocity);
-            if vn_before >= 0.0 {
-                continue;
-            } // skip already separating bodies
-            let vn_after = collision.normal.dot(b.velocity - a.velocity);
-            let v_target = -e * vn_before;
-            let dv = v_target - vn_after;
-            let r_a = collision.contact - a.position;
-            let r_b = collision.contact - b.position;
-            let wa = a.inv_mass
-                + a.inv_inertia
-                    * scalar_cross_product(r_a, collision.normal)
-                    * scalar_cross_product(r_a, collision.normal);
-            let wb = b.inv_mass
-                + b.inv_inertia
-                    * scalar_cross_product(r_b, collision.normal)
-                    * scalar_cross_product(r_b, collision.normal);
-            if wa + wb == 0.0 {
-                continue;
-            } // skip two static bodies (again)
-            let p = dv / (wa + wb) * collision.normal;
-
-            a.velocity -= p * a.inv_mass;
-            b.velocity += p * b.inv_mass;
-            a.angular_velocity -= a.inv_inertia * scalar_cross_product(r_a, p);
-            b.angular_velocity += b.inv_inertia * scalar_cross_product(r_b, p);
-        }
+        constraints.iter_mut()
+            .for_each(|constraint| constraint.solve_velocities(self, h));
 
         Ok(())
     }

@@ -21,6 +21,11 @@ pub struct RigidBody {
 }
 
 impl RigidBody {
+    // TODO: Replace static bodies with anchor joints in the future(?)
+    /// Returns `true` if the body is "static", 
+    /// i.e. should remain unnaffected by forces, impulses, velocity, etc.. 
+    pub fn is_static(&self) -> bool { self.inv_mass == 0.0 }
+
     pub fn bounds(&self) -> (DVec2, DVec2) {
         match self.shape {
             Shape::Circle { radius: r } => {
