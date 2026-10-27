@@ -1,4 +1,4 @@
-use glam::dvec2;
+use glam::{DVec2, dvec2};
 
 use crate::{HandleNotFound, World, body::BodyHandle, constraints::xpbd::apply_correction};
 
@@ -20,10 +20,10 @@ pub fn solve_distance_positions(
     let b = world.body(constraint.b)?;
 
     let delta = b.position - a.position;
-    let normal = delta.normalize();
+    let normal = delta.try_normalize().unwrap_or(DVec2::Y);
     let error = delta.length() - constraint.distance;
 
-    if error < 1e-6 {
+    if error.abs() < 1e-6 {
         return Ok(());
     }
 
