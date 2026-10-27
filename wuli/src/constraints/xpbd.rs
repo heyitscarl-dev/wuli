@@ -58,7 +58,10 @@ pub fn apply_single_body_correction(
         return Ok(());
     } // skip static objects
 
-    let w = body.inv_mass + body.inv_inertia * scalar_cross_product(relative, normal) * scalar_cross_product(relative, normal);
+    let w = body.inv_mass
+        + body.inv_inertia
+            * scalar_cross_product(relative, normal)
+            * scalar_cross_product(relative, normal);
     let alpha = compliance / (h * h);
     let dlambda = (-error - alpha * *lambda) / (w + alpha);
     *lambda += dlambda;

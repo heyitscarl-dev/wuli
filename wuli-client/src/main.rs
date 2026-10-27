@@ -1,13 +1,26 @@
 use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
-    camera::set_camera, color::{Color, LIME, ORANGE}, input::{MouseButton, is_mouse_button_down, is_mouse_button_pressed, mouse_position, mouse_wheel}, math::{Vec2, vec2}, shapes::{
+    camera::set_camera,
+    color::{Color, LIME, ORANGE},
+    input::{
+        MouseButton, is_mouse_button_down, is_mouse_button_pressed, mouse_position, mouse_wheel,
+    },
+    math::{Vec2, vec2},
+    shapes::{
         DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex,
         draw_rectangle_lines_ex, draw_triangle,
-    }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
+    },
+    time::get_frame_time,
+    window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
-    HandleNotFound, World, body::{BodyHandle, Shape}, constraints::{Constraint, ConstraintHandle, ConstraintKind, distance::DistanceConstraint, pin::PinConstraint},
+    HandleNotFound, World,
+    body::{BodyHandle, Shape},
+    constraints::{
+        Constraint, ConstraintHandle, ConstraintKind, distance::DistanceConstraint,
+        pin::PinConstraint,
+    },
 };
 
 use crate::view::View;
@@ -47,10 +60,13 @@ async fn main() {
     loop {
         if reset {
             world = (options[current].1)();
+            selected = None;
+            dragging = None;
             reset = false;
         }
         if reset_camera {
             view.centre = DVec2::ZERO;
+            view.width = 10.0;
             reset_camera = false;
         }
 
@@ -73,7 +89,14 @@ async fn main() {
 
         egui_macroquad::ui(|ctx| {
             ctx.set_visuals(tikz_visuals());
-            handle_controls(ctx, &mut world, &mut view, &mut last_mouse, &mut selected, &mut dragging);
+            handle_controls(
+                ctx,
+                &mut world,
+                &mut view,
+                &mut last_mouse,
+                &mut selected,
+                &mut dragging,
+            );
             draw_controls_ui(
                 ctx,
                 &options,
@@ -127,9 +150,12 @@ fn handle_controls(
         if select.is_none() {
             *dragging = None;
         } else if select == *selected {
-            let mouse = view.camera()
-                .screen_to_world(macroquad::math::vec2( mouse_position().0, mouse_position().1));
-            let anchor = dvec2(mouse.x as f64, mouse.y as f64) - world.body(select.unwrap()).unwrap().position;
+            let mouse = view.camera().screen_to_world(macroquad::math::vec2(
+                mouse_position().0,
+                mouse_position().1,
+            ));
+            let anchor = dvec2(mouse.x as f64, mouse.y as f64)
+                - world.body(select.unwrap()).unwrap().position;
 
             let pin = PinConstraint {
                 body: select.unwrap(),
@@ -138,7 +164,12 @@ fn handle_controls(
                 compliance: 0.0,
                 lambda: 0.0,
             };
-            let pin_handle = world.add_constraint(Constraint { kind: ConstraintKind::Pin { constraint: pin.clone() }, soft: true });
+            let pin_handle = world.add_constraint(Constraint {
+                kind: ConstraintKind::Pin {
+                    constraint: pin.clone(),
+                },
+                soft: true,
+            });
             *dragging = Some((pin_handle, pin));
         }
         *selected = select;
@@ -146,9 +177,18 @@ fn handle_controls(
 
     if is_mouse_button_down(MouseButton::Left) && !ctx.wants_pointer_input() {
         if let Some((handle, pin)) = dragging {
-            let mouse = view.camera()
-                .screen_to_world(macroquad::math::vec2( mouse_position().0, mouse_position().1));
-            if let Ok(Constraint { kind: ConstraintKind::Pin { constraint: PinConstraint { target, .. } }, .. }) = world.constraint_mut(*handle) {
+            let mouse = view.camera().screen_to_world(macroquad::math::vec2(
+                mouse_position().0,
+                mouse_position().1,
+            ));
+            if let Ok(Constraint {
+                kind:
+                    ConstraintKind::Pin {
+                        constraint: PinConstraint { target, .. },
+                    },
+                ..
+            }) = world.constraint_mut(*handle)
+            {
                 *target = dvec2(mouse.x as f64, mouse.y as f64);
             }
         }
@@ -207,9 +247,13 @@ fn draw_constraint(
     };
 
     match constraint {
-        Constraint { kind: ConstraintKind::Distance {
-            constraint: DistanceConstraint { a, b, .. },
-        }, .. } => {
+        Constraint {
+            kind:
+                ConstraintKind::Distance {
+                    constraint: DistanceConstraint { a, b, .. },
+                },
+            ..
+        } => {
             let a = world.body(*a)?;
             let b = world.body(*b)?;
             draw_line(
@@ -220,16 +264,22 @@ fn draw_constraint(
                 LINE_PX * px,
                 color,
             );
-        },
-        Constraint { kind: ConstraintKind::Contact { collision }, .. } => {
+        }
+        Constraint {
+            kind: ConstraintKind::Contact { collision },
+            ..
+        } => {
             draw_circle(
                 collision.contact.x as f32,
                 collision.contact.y as f32,
                 0.05,
                 LIME,
             );
-        },
-        Constraint { kind: ConstraintKind::Pin { constraint }, .. } => {
+        }
+        Constraint {
+            kind: ConstraintKind::Pin { constraint },
+            ..
+        } => {
             let body = world.body(constraint.body)?;
             draw_line(
                 body.position.x as f32 + constraint.local_anchor.x as f32,

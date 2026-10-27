@@ -2,7 +2,10 @@ use glam::{DVec2, dvec2};
 use slotmap::SlotMap;
 
 use crate::{
-    HandleNotFound, body::{BodyHandle, RigidBody}, collision::{self, narrow::Collision}, constraints::{Constraint, ConstraintHandle, ConstraintKind},
+    HandleNotFound,
+    body::{BodyHandle, RigidBody},
+    collision::{self, narrow::Collision},
+    constraints::{Constraint, ConstraintHandle, ConstraintKind},
 };
 
 pub const SUBSTEPS: usize = 20; // FIXME: Optimal?
@@ -106,7 +109,10 @@ impl World {
         let pseudo_constraints = self
             .collect_collisions(possible_collisions)
             .into_iter()
-            .map(|collision| Constraint { kind: ConstraintKind::Contact { collision }, soft: false });
+            .map(|collision| Constraint {
+                kind: ConstraintKind::Contact { collision },
+                soft: false,
+            });
 
         constraints
             .iter()

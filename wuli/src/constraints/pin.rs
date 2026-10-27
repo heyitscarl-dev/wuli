@@ -1,6 +1,8 @@
 use glam::DVec2;
 
-use crate::{HandleNotFound, World, body::BodyHandle, constraints::xpbd::{apply_single_body_correction}};
+use crate::{
+    HandleNotFound, World, body::BodyHandle, constraints::xpbd::apply_single_body_correction,
+};
 
 #[derive(Debug, Clone)]
 pub struct PinConstraint {
@@ -17,11 +19,11 @@ pub fn solve_pin_positions(
     h: f64,
 ) -> Result<(), HandleNotFound> {
     let body = world.body(constraint.body)?;
-    
+
     let delta = (body.position + constraint.local_anchor) - constraint.target;
     let normal = delta.normalize();
     let error = delta.length();
-    
+
     if error < 1e-6 {
         return Ok(());
     }

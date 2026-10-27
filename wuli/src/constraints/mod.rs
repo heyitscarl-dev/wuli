@@ -1,7 +1,10 @@
 use slotmap::new_key_type;
 
 use crate::{
-    World, body::BodyHandle, collision::narrow::Collision, constraints::{self, distance::DistanceConstraint, pin::PinConstraint},
+    World,
+    body::BodyHandle,
+    collision::narrow::Collision,
+    constraints::{self, distance::DistanceConstraint, pin::PinConstraint},
 };
 
 // Constraint types
@@ -29,7 +32,7 @@ impl Constraint {
 pub enum ConstraintKind {
     Distance { constraint: DistanceConstraint },
     Contact { collision: Collision },
-    Pin { constraint: PinConstraint }
+    Pin { constraint: PinConstraint },
 }
 
 impl ConstraintKind {
