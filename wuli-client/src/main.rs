@@ -108,7 +108,7 @@ async fn main() {
                 &mut show_debug,
             );
             if show_debug {
-                draw_debug_ui(ctx, &mut velocities);
+                draw_debug_ui(ctx, &world, &mut velocities);
             }
             if let Some(selected) = selected {
                 draw_inspector_ui(ctx, &mut world, &selected);
@@ -487,12 +487,23 @@ fn draw_controls_ui(
     });
 }
 
-fn draw_debug_ui(ctx: &Context, velocities: &mut bool) {
+fn draw_debug_ui(ctx: &Context, world: &World, velocities: &mut bool) {
     egui::Window::new("Debug")
         .default_open(false)
         .default_pos([12.0, 50.0])
         .resizable(false)
         .show(ctx, |ui| {
+            ui.label(egui::RichText::new("Information").underline());
+            egui::Grid::new("debug-infos").striped(true).show(ui, |ui| {
+                ui.label("Energy: ");
+                ui.label(format!("{:.2} J", world.energy()));
+                ui.end_row();
+
+                ui.label("Bodies: ");
+                ui.label(world.bodies.len().to_string());
+                ui.end_row();
+            });
+
             ui.checkbox(velocities, "Show Velocities");
         });
 }

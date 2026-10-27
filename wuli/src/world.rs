@@ -121,6 +121,13 @@ impl World {
             .collect()
     }
 
+    pub fn energy(&self) -> f64 {
+        self.bodies
+            .iter()
+            .map(|(_, body)| body.kinetic_energy() + body.potential_energy(self.gravity))
+            .sum()
+    }
+
     pub fn substep(
         &mut self,
         h: f64,

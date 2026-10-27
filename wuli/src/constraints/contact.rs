@@ -1,5 +1,7 @@
 use crate::{
-    HandleNotFound, World, collision::narrow::{Collision, get_collision}, constraints::xpbd::{apply_correction, scalar_cross_product},
+    HandleNotFound, World,
+    collision::narrow::{Collision, get_collision},
+    constraints::xpbd::{apply_correction, scalar_cross_product},
 };
 
 pub fn solve_contact_positions(

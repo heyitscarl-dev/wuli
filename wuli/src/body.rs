@@ -28,6 +28,25 @@ impl RigidBody {
         self.inv_mass == 0.0
     }
 
+    pub fn kinetic_energy(&self) -> f64 {
+        if self.is_static() {
+            return 0.0;
+        }
+
+        let linear = 0.5 * self.inv_mass.recip() * self.velocity.length_squared();
+        let angular = 0.5 * self.inv_inertia.recip() * self.angular_velocity.powi(2);
+        linear + angular
+    }
+
+    pub fn potential_energy(&self, gravity: DVec2) -> f64 {
+        if self.is_static() {
+            return 0.0;
+        }
+
+        let mass = self.inv_mass.recip();
+        -mass * gravity.dot(self.position)
+    }
+
     pub fn bounds(&self) -> (DVec2, DVec2) {
         match self.shape {
             Shape::Circle { radius: r } => {
