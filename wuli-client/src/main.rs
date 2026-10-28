@@ -1,19 +1,12 @@
-use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Visuals};
+use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Ui, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
-    camera::set_camera,
-    color::{Color, LIME, ORANGE},
-    input::{
-        KeyCode, MouseButton, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed,
-        mouse_position, mouse_wheel,
-    },
-    math::{Vec2, vec2},
-    shapes::{
+    camera::set_camera, color::{Color, LIME}, input::{
+        KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed, mouse_position, mouse_wheel,
+    }, math::{Vec2, vec2}, shapes::{
         DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex,
         draw_rectangle_lines_ex, draw_triangle,
-    },
-    time::get_frame_time,
-    window::{clear_background, next_frame, screen_width},
+    }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
     HandleNotFound, World,
@@ -24,9 +17,10 @@ use wuli::{
     },
 };
 
-use crate::view::View;
+use crate::{select::Selection, view::View};
 
 pub mod view;
+pub mod select;
 
 // TikZ look: black ink and gray!20 fills on white paper, strokes a fixed number of pixels wide
 const PAPER: Color = Color::new(1.0, 1.0, 1.0, 1.0);
@@ -55,7 +49,7 @@ async fn main() {
     let mut show_debug = false;
 
     let mut velocities = false;
-    let mut selected = None;
+    let mut selected = Selection::None;
     let mut dragging = None;
 
     let mut last_mouse = None;
@@ -63,7 +57,7 @@ async fn main() {
     loop {
         if reset {
             world = (options[current].1)();
-            selected = None;
+            selected = Selection::None;
             dragging = None;
             reset = false;
         }
@@ -113,7 +107,7 @@ async fn main() {
             if show_debug {
                 draw_debug_ui(ctx, &world, &mut velocities);
             }
-            if let Some(selected) = selected {
+            if !selected.is_none() {
                 draw_inspector_ui(ctx, &mut world, &selected);
             }
         });
@@ -145,32 +139,30 @@ fn handle_controls(
     world: &mut World,
     view: &mut View,
     last_mouse: &mut Option<(f32, f32)>,
-    selected: &mut Option<BodyHandle>,
+    selected: &mut Selection,
     dragging: &mut Option<(ConstraintHandle, PinConstraint)>,
 ) {
     if is_key_pressed(KeyCode::Delete) && !ctx.wants_keyboard_input() {
-        if let Some(selected_body) = selected {
-            let _ = world.clean_remove_body(*selected_body);
-            *selected = None;
-            *dragging = None;
-        }
+        selected.delete(world);
+        *dragging = None;
     }
 
     if is_mouse_button_pressed(MouseButton::Left) && !ctx.wants_pointer_input() {
-        let select = get_body_under_mouse(world, view);
-        if select.is_none() {
+        let new_selection = Selection::from_mouse(world, view);
+        if new_selection.is_none() { 
             *dragging = None;
-        } else if select == *selected {
+            *selected = new_selection;
+        } else if new_selection == *selected && let Selection::Body(handle) = new_selection {
             let mouse = view.camera().screen_to_world(macroquad::math::vec2(
                 mouse_position().0,
                 mouse_position().1,
             ));
-            let body = world.body(select.unwrap()).unwrap();
+            let body = world.body(handle).unwrap();
             let anchor =
                 (dvec2(mouse.x as f64, mouse.y as f64) - body.position).rotate_angle(-body.angle);
 
             let pin = PinConstraint {
-                body: select.unwrap(),
+                body: handle,
                 local_anchor: anchor,
                 target: dvec2(mouse.x as f64, mouse.y as f64),
                 compliance: 1e-4 * body.inv_mass,
@@ -185,8 +177,13 @@ fn handle_controls(
                 soft: true,
             });
             *dragging = Some((pin_handle, pin));
+        } else {
+            if is_key_down(KeyCode::LeftShift) {
+                *selected = selected.clone().appended(new_selection);
+            } else {
+                *selected = new_selection;
+            }
         }
-        *selected = select;
     }
 
     if is_mouse_button_down(MouseButton::Left) && !ctx.wants_pointer_input() {
@@ -245,25 +242,26 @@ fn handle_controls(
     }
 }
 
-fn draw_bodies(world: &World, px: f32, selected: &Option<BodyHandle>) {
+fn draw_bodies(world: &World, px: f32, selected: &Selection) {
     world.bodies.iter().for_each(|(handle, _)| {
         let _ = draw_body(world, handle, px, selected);
     });
 }
 
-fn draw_constraints(world: &World, px: f32, selected: &Option<BodyHandle>) {
-    world.constraints.iter().for_each(|(_, c)| {
-        let _ = draw_constraint(world, px, c, selected);
+fn draw_constraints(world: &World, px: f32, selected: &Selection) {
+    world.constraints.iter().for_each(|(h, _)| {
+        let _ = draw_constraint(world, px, h, selected);
     });
 }
 
 fn draw_constraint(
     world: &World,
     px: f32,
-    constraint: &Constraint,
-    selected: &Option<BodyHandle>,
+    handle: ConstraintHandle,
+    selected: &Selection,
 ) -> Result<(), HandleNotFound> {
-    let color = if selected.is_some_and(|h| constraint.kind.bodies().contains(&h)) {
+    let constraint = world.constraint(handle)?;
+    let color = if selected.contains_constraint(handle) {
         ACCENT
     } else {
         INK
@@ -329,9 +327,9 @@ fn draw_body(
     world: &World,
     body: BodyHandle,
     px: f32,
-    selected: &Option<BodyHandle>,
+    selected: &Selection,
 ) -> Result<(), HandleNotFound> {
-    let outline = if selected.is_some_and(|h| h == body) {
+    let outline = if selected.contains_body(body) {
         ACCENT
     } else {
         INK
@@ -521,67 +519,79 @@ fn draw_debug_ui(ctx: &Context, world: &World, velocities: &mut bool) {
         });
 }
 
-fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &BodyHandle) {
+fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &Selection) {
     egui::Window::new("Inspector")
         .anchor(Align2::RIGHT_TOP, [-12.0, 40.0])
         .default_open(true)
         .resizable(true)
         .show(ctx, |ui| {
-            let body = world
-                .body_mut(*selected)
-                .expect("expected selected body to exist");
-
-            ui.label(egui::RichText::new("Physical Quantities").underline());
-            egui::Grid::new("quantities").striped(true).show(ui, |ui| {
-                // Shape
-                ui.label("Shape: ");
-                ui.label(format!("{}", body.shape));
-                ui.end_row();
-
-                // Mass
-                ui.label("Mass: ");
-                ui.label(if body.inv_mass == 0.0 {
-                    "static".to_string()
-                } else {
-                    format!("{:.2}", 1.0 / body.inv_mass).to_string()
-                });
-                ui.end_row();
-
-                ui.label("x: ");
-                ui_vector_field(ui, &mut body.position);
-                ui.end_row();
-
-                ui.label("v: ");
-                ui_vector_field(ui, &mut body.velocity);
-                ui.end_row();
-
-                ui.label("θ: ");
-                ui.add(
-                    egui::DragValue::new(&mut body.angle)
-                        .custom_parser(|v| v.parse::<f64>().ok().map(|v| v.to_radians()))
-                        .custom_formatter(|v, _| format!("{:.2}", v.to_degrees())),
-                );
-                ui.end_row();
-
-                ui.label("ω: ");
-                ui.add(
-                    egui::DragValue::new(&mut body.angular_velocity)
-                        .custom_parser(|v| v.parse::<f64>().ok().map(|v| v.to_radians()))
-                        .custom_formatter(|v, _| format!("{:.2}", v.to_degrees())),
-                );
-                ui.end_row();
-            });
-
-            ui.label(egui::RichText::new("Constraints").underline());
-            world
-                .constraints
-                .iter()
-                .filter(|(_, c)| c.kind.bodies().contains(selected))
-                .for_each(|(_, c)| {
-                    ui.label(format!("{}", c.to_string())); // TODO: constraint naming!
-                });
+            match selected {
+                Selection::Body(handle) => draw_body_inspector_ui(ui, world, *handle),
+                Selection::Constraint(_handle) => draw_constraint_inspector_ui(),
+                Selection::Many(_selections) => draw_many_inspector_ui(),
+                _ => {}
+            }
         });
 }
+
+fn draw_body_inspector_ui(ui: &mut Ui, world: &mut World, selected: BodyHandle) {
+    let body = world
+        .body_mut(selected)
+        .expect("expected selected body to exist");
+
+    ui.label(egui::RichText::new("Physical Quantities").underline());
+    egui::Grid::new("quantities").striped(true).show(ui, |ui| {
+        // Shape
+        ui.label("Shape: ");
+        ui.label(format!("{}", body.shape));
+        ui.end_row();
+
+        // Mass
+        ui.label("Mass: ");
+        ui.label(if body.inv_mass == 0.0 {
+            "static".to_string()
+        } else {
+            format!("{:.2}", 1.0 / body.inv_mass).to_string()
+        });
+        ui.end_row();
+
+        ui.label("x: ");
+        ui_vector_field(ui, &mut body.position);
+        ui.end_row();
+
+        ui.label("v: ");
+        ui_vector_field(ui, &mut body.velocity);
+        ui.end_row();
+
+        ui.label("θ: ");
+        ui.add(
+            egui::DragValue::new(&mut body.angle)
+                .custom_parser(|v| v.parse::<f64>().ok().map(|v| v.to_radians()))
+                .custom_formatter(|v, _| format!("{:.2}", v.to_degrees())),
+        );
+        ui.end_row();
+
+        ui.label("ω: ");
+        ui.add(
+            egui::DragValue::new(&mut body.angular_velocity)
+                .custom_parser(|v| v.parse::<f64>().ok().map(|v| v.to_radians()))
+                .custom_formatter(|v, _| format!("{:.2}", v.to_degrees())),
+        );
+        ui.end_row();
+    });
+
+    ui.label(egui::RichText::new("Constraints").underline());
+    world
+        .constraints
+        .iter()
+        .filter(|(_, c)| c.kind.bodies().contains(&selected))
+        .for_each(|(_, c)| {
+            ui.label(format!("{}", c.to_string())); // TODO: constraint naming!
+        });
+}
+
+fn draw_constraint_inspector_ui() {}
+fn draw_many_inspector_ui() {}
 
 fn ui_vector_field(ui: &mut egui::Ui, vector: &mut DVec2) {
     let (x, y) = (&mut vector.x, &mut vector.y);
