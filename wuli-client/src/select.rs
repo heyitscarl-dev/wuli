@@ -9,7 +9,7 @@ pub enum Selection {
     None,
     Body(BodyHandle),
     Constraint(ConstraintHandle),
-    Many(Vec<Selection>)
+    Many(Vec<Selection>),
 }
 
 impl Selection {
@@ -18,14 +18,14 @@ impl Selection {
             .or_else(|| Self::constraint_from_mouse())
             .unwrap_or(Self::None)
     }
-    
+
     pub fn body_from_mouse(world: &World, view: &View) -> Option<Self> {
         let mouse = mouse_position();
-        let mouse = view.camera()
+        let mouse = view
+            .camera()
             .screen_to_world(macroquad::math::vec2(mouse.0, mouse.1));
         let mouse = dvec2(mouse.x as f64, mouse.y as f64);
-        world.body_at(mouse)
-            .map(|handle| Self::Body(handle))
+        world.body_at(mouse).map(|handle| Self::Body(handle))
     }
 
     pub fn constraint_from_mouse() -> Option<Self> {
@@ -37,7 +37,7 @@ impl Selection {
         match self {
             Selection::None | Selection::Constraint(_) => false,
             Selection::Body(self_handle) => *self_handle == handle,
-            Selection::Many(selections) => selections.iter().any(|s|s.contains_body(handle))
+            Selection::Many(selections) => selections.iter().any(|s| s.contains_body(handle)),
         }
     }
 
@@ -45,7 +45,7 @@ impl Selection {
         match self {
             Selection::None | Selection::Body(_) => false,
             Selection::Constraint(self_handle) => *self_handle == handle,
-            Selection::Many(selections) => selections.iter().any(|s|s.contains_constraint(handle))
+            Selection::Many(selections) => selections.iter().any(|s| s.contains_constraint(handle)),
         }
     }
 
@@ -55,17 +55,17 @@ impl Selection {
 
     pub fn removed(self, other: &Selection) -> Selection {
         match (self.clone(), other) {
-            (Selection::None, _) => {},
+            (Selection::None, _) => {}
             (Selection::Body(handle), Selection::Body(other_handle)) => {
                 if handle == *other_handle {
                     return Selection::None;
                 }
-            },
+            }
             (Selection::Constraint(handle), Selection::Constraint(other_handle)) => {
                 if handle == *other_handle {
                     return Selection::None;
                 }
-            },
+            }
             (Selection::Many(selections), _) => {
                 let mut selections = selections.clone();
                 selections.retain(|selection| selection != other);
@@ -76,8 +76,8 @@ impl Selection {
                     return selections.pop().unwrap();
                 }
                 return Selection::Many(selections);
-            },
-            _ => {},
+            }
+            _ => {}
         }
         return self;
     }
@@ -85,24 +85,25 @@ impl Selection {
     pub fn appended(self, other: Selection) -> Selection {
         match self.clone() {
             Selection::None => other,
-            Selection::Body(_) | Selection::Constraint(_) => {
-                Selection::Many(vec![self, other])
-            },
-            Selection::Many(selections) => {
-                Selection::Many(vec![selections, vec![other]].into_iter().flatten().collect())
-            },
+            Selection::Body(_) | Selection::Constraint(_) => Selection::Many(vec![self, other]),
+            Selection::Many(selections) => Selection::Many(
+                vec![selections, vec![other]]
+                    .into_iter()
+                    .flatten()
+                    .collect(),
+            ),
         }
     }
 
     pub fn delete(&self, world: &mut wuli::World) {
         match self {
-            Selection::None => {},
+            Selection::None => {}
             Selection::Body(handle) => {
                 let _ = world.clean_remove_body(*handle);
-            },
+            }
             Selection::Constraint(handle) => {
                 let _ = world.remove_constraint(*handle);
-            },
+            }
             Selection::Many(selections) => {
                 for selection in selections {
                     selection.delete(world);

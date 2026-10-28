@@ -1,12 +1,19 @@
 use egui::{Align, Align2, Color32, Context, CornerRadius, Layout, Shadow, Stroke, Ui, Visuals};
 use glam::{DVec2, dvec2};
 use macroquad::{
-    camera::set_camera, color::{Color, LIME}, input::{
-        KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed, mouse_position, mouse_wheel,
-    }, math::{Vec2, vec2}, shapes::{
+    camera::set_camera,
+    color::{Color, LIME},
+    input::{
+        KeyCode, MouseButton, is_key_down, is_key_pressed, is_mouse_button_down,
+        is_mouse_button_pressed, mouse_position, mouse_wheel,
+    },
+    math::{Vec2, vec2},
+    shapes::{
         DrawRectangleParams, draw_circle, draw_line, draw_poly, draw_poly_lines, draw_rectangle_ex,
         draw_rectangle_lines_ex, draw_triangle,
-    }, time::get_frame_time, window::{clear_background, next_frame, screen_width},
+    },
+    time::get_frame_time,
+    window::{clear_background, next_frame, screen_width},
 };
 use wuli::{
     HandleNotFound, World,
@@ -17,10 +24,11 @@ use wuli::{
     },
 };
 
-use crate::{select::Selection, view::View};
+use crate::{select::Selection, ui::spawn::ui_draw_spawn_component, view::View};
 
-pub mod view;
 pub mod select;
+pub mod ui;
+pub mod view;
 
 // TikZ look: black ink and gray!20 fills on white paper, strokes a fixed number of pixels wide
 const PAPER: Color = Color::new(1.0, 1.0, 1.0, 1.0);
@@ -31,10 +39,18 @@ const LINE_PX: f32 = 2.5;
 
 const ACCENT: Color = Color::new(0.4, 0.4, 0.8, 1.0);
 
+struct State {
+    pub spawn: ui::spawn::State,
+}
+
 #[macroquad::main("wuli")]
 async fn main() {
     let options = wuli_scenes::available();
     let mut current = 0;
+
+    let mut state = State {
+        spawn: ui::spawn::State { collapsed: true },
+    };
 
     let mut world = (options[current].1)();
     let mut view = View::new(0.0, 0.0, 10.0);
@@ -86,6 +102,7 @@ async fn main() {
 
         egui_macroquad::ui(|ctx| {
             ctx.set_visuals(tikz_visuals());
+
             handle_controls(
                 ctx,
                 &mut world,
@@ -110,6 +127,8 @@ async fn main() {
             if !selected.is_none() {
                 draw_inspector_ui(ctx, &mut world, &selected);
             }
+
+            ui_draw_spawn_component(&mut state.spawn, ctx);
         });
         egui_macroquad::draw();
 
@@ -149,10 +168,12 @@ fn handle_controls(
 
     if is_mouse_button_pressed(MouseButton::Left) && !ctx.wants_pointer_input() {
         let new_selection = Selection::from_mouse(world, view);
-        if new_selection.is_none() { 
+        if new_selection.is_none() {
             *dragging = None;
             *selected = new_selection;
-        } else if new_selection == *selected && let Selection::Body(handle) = new_selection {
+        } else if new_selection == *selected
+            && let Selection::Body(handle) = new_selection
+        {
             let mouse = view.camera().screen_to_world(macroquad::math::vec2(
                 mouse_position().0,
                 mouse_position().1,
@@ -524,13 +545,11 @@ fn draw_inspector_ui(ctx: &Context, world: &mut World, selected: &Selection) {
         .anchor(Align2::RIGHT_TOP, [-12.0, 40.0])
         .default_open(true)
         .resizable(true)
-        .show(ctx, |ui| {
-            match selected {
-                Selection::Body(handle) => draw_body_inspector_ui(ui, world, *handle),
-                Selection::Constraint(_handle) => draw_constraint_inspector_ui(),
-                Selection::Many(_selections) => draw_many_inspector_ui(),
-                _ => {}
-            }
+        .show(ctx, |ui| match selected {
+            Selection::Body(handle) => draw_body_inspector_ui(ui, world, *handle),
+            Selection::Constraint(_handle) => draw_constraint_inspector_ui(),
+            Selection::Many(_selections) => draw_many_inspector_ui(),
+            _ => {}
         });
 }
 
