@@ -34,6 +34,8 @@ const FILL: Color = Color::new(0.9, 0.9, 0.9, 1.0);
 const INK: Color = Color::new(0.0, 0.0, 0.0, 1.0);
 const LINE_PX: f32 = 2.5;
 
+const ACCENT: Color = Color::new(0.4, 0.4, 0.8, 1.0);
+
 #[macroquad::main("wuli")]
 async fn main() {
     let options = wuli_scenes::available();
@@ -210,12 +212,14 @@ fn handle_controls(
     }
 
     // Zoom
-    let (_, wheel) = mouse_wheel();
-    if wheel > 0.0 {
-        view.width *= 0.9;
-    }
-    if wheel < 0.0 {
-        view.width *= 1.1;
+    if !ctx.wants_pointer_input() {
+        let (_, wheel) = mouse_wheel();
+        if wheel > 0.0 {
+            view.width *= 0.9;
+        }
+        if wheel < 0.0 {
+            view.width *= 1.1;
+        }
     }
 
     // Pan
@@ -251,7 +255,7 @@ fn draw_constraint(
     selected: &Option<BodyHandle>,
 ) -> Result<(), HandleNotFound> {
     let color = if selected.is_some_and(|h| constraint.kind.bodies().contains(&h)) {
-        ORANGE
+        ACCENT
     } else {
         INK
     };
@@ -319,7 +323,7 @@ fn draw_body(
     selected: &Option<BodyHandle>,
 ) -> Result<(), HandleNotFound> {
     let outline = if selected.is_some_and(|h| h == body) {
-        ORANGE
+        ACCENT
     } else {
         INK
     };
