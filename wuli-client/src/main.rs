@@ -4,7 +4,8 @@ use macroquad::{
     camera::set_camera,
     color::{Color, LIME, ORANGE},
     input::{
-        MouseButton, is_mouse_button_down, is_mouse_button_pressed, mouse_position, mouse_wheel,
+        KeyCode, MouseButton, is_key_pressed, is_mouse_button_down, is_mouse_button_pressed,
+        mouse_position, mouse_wheel,
     },
     math::{Vec2, vec2},
     shapes::{
@@ -147,6 +148,14 @@ fn handle_controls(
     selected: &mut Option<BodyHandle>,
     dragging: &mut Option<(ConstraintHandle, PinConstraint)>,
 ) {
+    if is_key_pressed(KeyCode::Delete) && !ctx.wants_keyboard_input() {
+        if let Some(selected_body) = selected {
+            let _ = world.clean_remove_body(*selected_body);
+            *selected = None;
+            *dragging = None;
+        }
+    }
+
     if is_mouse_button_pressed(MouseButton::Left) && !ctx.wants_pointer_input() {
         let select = get_body_under_mouse(world, view);
         if select.is_none() {

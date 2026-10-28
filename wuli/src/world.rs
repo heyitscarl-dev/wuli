@@ -25,6 +25,35 @@ impl World {
         }
     }
 
+    pub fn remove_body(&mut self, handle: BodyHandle) -> Result<RigidBody, HandleNotFound> {
+        self.bodies.remove(handle).ok_or(HandleNotFound)
+    }
+
+    pub fn remove_constraint(
+        &mut self,
+        handle: ConstraintHandle,
+    ) -> Result<Constraint, HandleNotFound> {
+        self.constraints.remove(handle).ok_or(HandleNotFound)
+    }
+
+    pub fn clean_remove_body(&mut self, handle: BodyHandle) -> Result<RigidBody, HandleNotFound> {
+        let body = self.bodies.remove(handle).ok_or(HandleNotFound)?;
+
+        // Remove all constraints that reference this body.
+        let constraints_to_remove: Vec<ConstraintHandle> = self
+            .constraints
+            .iter()
+            .filter(|(_, constraint)| constraint.kind.bodies().contains(&handle))
+            .map(|(handle, _)| handle)
+            .collect();
+
+        for constraint_handle in constraints_to_remove {
+            self.constraints.remove(constraint_handle);
+        }
+
+        Ok(body)
+    }
+
     pub fn add_body(&mut self, body: RigidBody) -> BodyHandle {
         self.bodies.insert(body)
     }
